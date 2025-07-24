@@ -22,7 +22,7 @@ Set folder access-based enumeration for shares,scid-4003
 Remove share write permission set to 'Everyone',missing
 Remove shares from the root folder,scid-4002
 Turn on PUA protection in block mode,scid-2013
-Turn on Microsoft Defender Antivirus PUA protection in block mode for Linux,missing
+Turn on Microsoft Defender Antivirus PUA protection in block mode for Linux,scid-6091
 Turn on Microsoft Defender Antivirus PUA protection in block mode in macOS,missing
 Encrypt all BitLocker-supported drives,scid-2090
 Set Microsoft Defender SmartScreen app and file checking to block or warn,scid-2060
