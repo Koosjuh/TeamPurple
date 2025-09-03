@@ -1,5 +1,5 @@
 Security recommendation,SCID
-Turn on Firewall in macOS,missing
+Turn on Firewall in macOS,scid-5007
 Secure Microsoft Defender Firewall domain profile,scid-2071
 Turn on Microsoft Defender Firewall,scid-2070
 Secure Microsoft Defender firewall private profile,scid-2072
