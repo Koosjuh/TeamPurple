@@ -27,3 +27,4 @@ Turn on Microsoft Defender Antivirus PUA protection in block mode in macOS,scid-
 Encrypt all BitLocker-supported drives,scid-2090
 Set Microsoft Defender SmartScreen app and file checking to block or warn,scid-2060
 Set Microsoft Defender SmartScreen Microsoft Edge site and download checking to block or warn,scid-2061
+Secure Home Folders in macOS;scid-5014
