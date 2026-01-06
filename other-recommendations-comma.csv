@@ -1,9 +1,9 @@
 Security recommendation,SCID
 Turn on Firewall in macOS,scid-5007
 Secure Microsoft Defender Firewall domain profile,scid-2071
-Turn on Microsoft Defender Firewall,scid-2070
 Secure Microsoft Defender firewall private profile,scid-2072
 Secure Microsoft Defender Firewall public profile,scid-2073
+Turn on Microsoft Defender Firewall,scid-2070
 Disable Microsoft Defender Firewall notifications when programs are blocked for Domain profile,scid-43
 Disable Microsoft Defender Firewall notifications when programs are blocked for Private profile,scid-46
 Disable Microsoft Defender Firewall notifications when programs are blocked for Public profile,scid-49
@@ -19,7 +19,7 @@ Fix unquoted service path for Windows services,scid-3001
 Change service executable path to a common protected location,scid-3002
 Disallow offline access to shares,scid-4000
 Set folder access-based enumeration for shares,scid-4003
-Remove share write permission set to 'Everyone',SCID-20103
+Remove share write permission set to 'Everyone',scid-4001
 Remove shares from the root folder,scid-4002
 Turn on PUA protection in block mode,scid-2013
 Turn on Microsoft Defender Antivirus PUA protection in block mode for Linux,scid-6091
@@ -28,3 +28,4 @@ Encrypt all BitLocker-supported drives,scid-2090
 Set Microsoft Defender SmartScreen app and file checking to block or warn,scid-2060
 Set Microsoft Defender SmartScreen Microsoft Edge site and download checking to block or warn,scid-2061
 Secure Home Folders in macOS,scid-5014
+
