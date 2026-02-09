@@ -1,0 +1,213 @@
+let Today = now();
+let SoonWindow = 365d;
+// Single point of management (GitHub RAW)
+let EolCsvUrl = @"https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/Attack%20Surface%20Management/Devices/End%20of%20Life/EndOfLife.csv";
+// Catalog from CSV
+let OsCatalog =
+    externaldata(
+        CatalogKey:string,
+        SpecificBucket:string,
+        OSPlatform:string,
+        MajorBuild:int,
+        EosDate:datetime,
+        Notes:string,
+        CollapseGroup:string
+    )
+    [EolCsvUrl]
+    with (format="csv", ignoreFirstRecord=true);
+// Latest device snapshot
+let Devices =
+    DeviceInfo
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | extend
+        OSPlatform = tostring(OSPlatform),
+        OSVersion = tostring(OSVersion),
+        OSDistribution = tostring(column_ifexists("OSDistribution","")),
+        OnboardingStatus = tostring(column_ifexists("OnboardingStatus","")),
+        IsInternetFacing = tobool(column_ifexists("IsInternetFacing", false))
+    // Prefer major build from OSVersion ("10.0.<major>.<rev>"), fallback to OSBuild
+    | extend MajorBuildFromVersion = toint(tostring(split(OSVersion, ".")[2]))
+    | extend MajorBuild = coalesce(MajorBuildFromVersion, toint(OSBuild))
+    | extend IsMDEUnsupported = iff(tolower(OnboardingStatus) == "unsupported", true, false)
+    // Not onboarded signal (tune as needed)
+    | extend IsNotOnboarded =
+        OnboardingStatus in~ ("Can be onboarded", "Insufficient Info") or isempty(OnboardingStatus)
+    // LTSC 2021 vs GA for Win10 21H2 (both have major build 19044)
+    | extend IsWin10_21H2_LTSC2021 = OSPlatform == "Windows10"
+        and MajorBuild == 19044
+        and (OSDistribution has_cs "LTSC" or OSDistribution has_cs "Long-Term Servicing");
+// Map devices to catalog keys.
+// Special-case: Win10 19044 LTSC2021 row is uniquely identified via CatalogKey = win10_21h2_ltsc2021.
+// Everything else joins via (OSPlatform + MajorBuild) when MajorBuild exists in catalog, else OSPlatform-only rows.
+let DeviceTagged =
+    Devices
+    | extend CatalogKeyHint = iff(IsWin10_21H2_LTSC2021, "win10_21h2_ltsc2021", "")
+    | join kind=leftouter (
+        OsCatalog
+        | extend CatalogKeyLower = tolower(CatalogKey)
+    ) on $left.CatalogKeyHint == $right.CatalogKeyLower
+    | extend CatalogKey = iff(isnotempty(CatalogKeyHint), CatalogKey, "")
+    | extend SpecificBucket = iff(isnotempty(CatalogKeyHint), SpecificBucket, "")
+    | extend EosDate = iff(isnotempty(CatalogKeyHint), EosDate, datetime(null))
+    | extend Notes = iff(isnotempty(CatalogKeyHint), Notes, "")
+    | extend CollapseGroup = iff(isnotempty(CatalogKeyHint), CollapseGroup, "")
+    | project-away CatalogKeyLower, CatalogKeyHint
+    | union (
+        Devices
+        | where not(IsWin10_21H2_LTSC2021)
+        | join kind=leftouter (
+            OsCatalog
+        ) on OSPlatform
+        // If catalog MajorBuild is null, match all of that OSPlatform; otherwise require MajorBuild match
+        | where (isnull(MajorBuild1) and isnull(MajorBuild)) or (MajorBuild == MajorBuild1)
+        | project
+            DeviceId,
+            OSPlatform,
+            MajorBuild,
+            OnboardingStatus,
+            IsInternetFacing,
+            IsMDEUnsupported,
+            IsNotOnboarded,
+            CatalogKey,
+            SpecificBucket,
+            EosDate,
+            Notes,
+            CollapseGroup
+    )
+    // Guard against duplicates caused by OSPlatform-only matches + build matches
+    | summarize arg_max(EosDate, *) by DeviceId;
+// Summarize counts per catalog row
+let Counts =
+    DeviceTagged
+    | where isnotempty(CatalogKey)
+    | summarize
+        Devices = dcount(DeviceId),
+        InternetFacingDevices = dcountif(DeviceId, IsInternetFacing),
+        UnsupportedDevices = dcountif(DeviceId, IsMDEUnsupported),
+        NotOnboardedDevices = dcountif(DeviceId, IsNotOnboarded and not(IsMDEUnsupported))
+      by CatalogKey;
+// Join counts onto catalog so all rows always appear
+let FullTable =
+    OsCatalog
+    | join kind=leftouter Counts on CatalogKey
+    | extend
+        Devices = coalesce(Devices, 0),
+        InternetFacingDevices = coalesce(InternetFacingDevices, 0),
+        UnsupportedDevices = coalesce(UnsupportedDevices, 0),
+        NotOnboardedDevices = coalesce(NotOnboardedDevices, 0)
+    | extend
+        SupportState = case(
+            isnull(EosDate), "Unknown EOL",
+            Today >= EosDate, "Out of support",
+            Today + SoonWindow >= EosDate, strcat("EOL within ", tostring(toint(SoonWindow / 1d)), " days"),
+            "Supported (known lifecycle)"
+        )
+    | extend
+        RiskNote = trim(" ;", strcat(
+            case(
+                InternetFacingDevices > 0 and SupportState has "EOL within", "Internet-facing + near EOL; ",
+                InternetFacingDevices > 0 and SupportState == "Out of support", "Internet-facing + out of support; ",
+                InternetFacingDevices > 0, "Internet-facing; ",
+                ""
+            ),
+            case(NotOnboardedDevices > 0, strcat("Not onboarded: ", tostring(NotOnboardedDevices), "; "), ""),
+            case(Devices == 0, "No devices seen; ", "")
+        ))
+    | project
+        CatalogKey,
+        SpecificBucket,
+        CollapseGroup,
+        OSPlatform,
+        MajorBuild,
+        EosDate,
+        SupportState,
+        Devices,
+        InternetFacingDevices,
+        NotOnboardedDevices,
+        UnsupportedDevices,
+        RiskNote,
+        Notes;
+// Summaries:
+// 1) Win10 out-of-support summary row
+// 2) Win11 out-of-support summary row
+let WinOosSummary =
+    FullTable
+    | where OSPlatform in ("Windows10","Windows11") and SupportState == "Out of support"
+    | summarize
+        Devices = sum(Devices),
+        InternetFacingDevices = sum(InternetFacingDevices),
+        NotOnboardedDevices = sum(NotOnboardedDevices),
+        UnsupportedDevices = sum(UnsupportedDevices)
+      by OSPlatform
+    | extend
+        CatalogKey = "",
+        SpecificBucket = case(OSPlatform=="Windows10","Windows 10 out of support (summary)","Windows 11 out of support (summary)"),
+        CollapseGroup = "summary",
+        MajorBuild = int(null),
+        EosDate = datetime(null),
+        SupportState = "Out of support",
+        Notes = "Summary row (collapsed)"
+    | extend
+        RiskNote = trim(" ;", strcat(
+            case(InternetFacingDevices > 0, strcat("Internet-facing: ", tostring(InternetFacingDevices), "; "), ""),
+            case(NotOnboardedDevices > 0, strcat("Not onboarded: ", tostring(NotOnboardedDevices), "; "), ""),
+            case(Devices == 0, "No devices seen; ", "")
+        ))
+    | project CatalogKey, SpecificBucket, CollapseGroup, OSPlatform, MajorBuild, EosDate, SupportState, Devices, InternetFacingDevices, NotOnboardedDevices, UnsupportedDevices, RiskNote, Notes;
+// Generic CollapseGroup summaries (data-driven)
+// Any row with CollapseGroup populated will be collapsed into a single summary row per CollapseGroup.
+let CollapseGroupSummary =
+    FullTable
+    | where isnotempty(CollapseGroup) and CollapseGroup != "summary"
+    | summarize
+        Devices = sum(Devices),
+        InternetFacingDevices = sum(InternetFacingDevices),
+        NotOnboardedDevices = sum(NotOnboardedDevices),
+        UnsupportedDevices = sum(UnsupportedDevices),
+        MinEosDate = min(EosDate)
+      by CollapseGroup
+    | extend
+        CatalogKey = "",
+        SpecificBucket = strcat(CollapseGroup, " (summary)"),
+        OSPlatform = "Grouped",
+        MajorBuild = int(null),
+        EosDate = MinEosDate,
+        SupportState = "Mixed",
+        Notes = "Summary row (collapsed)"
+    | extend
+        RiskNote = trim(" ;", strcat(
+            case(InternetFacingDevices > 0, strcat("Internet-facing: ", tostring(InternetFacingDevices), "; "), ""),
+            case(NotOnboardedDevices > 0, strcat("Not onboarded: ", tostring(NotOnboardedDevices), "; "), ""),
+            case(Devices == 0, "No devices seen; ", "")
+        ))
+    | project CatalogKey, SpecificBucket, CollapseGroup, OSPlatform, MajorBuild, EosDate, SupportState, Devices, InternetFacingDevices, NotOnboardedDevices, UnsupportedDevices, RiskNote, Notes;
+// Final output:
+// - Show detailed rows only where CollapseGroup is empty
+// - Replace Win10/Win11 out-of-support detail rows with two summary rows
+// - Add summary rows for any CollapseGroup you define in the CSV
+(
+    FullTable
+    | where isempty(CollapseGroup)
+    | where not(OSPlatform in ("Windows10","Windows11") and SupportState == "Out of support")
+)
+| union WinOosSummary
+| union CollapseGroupSummary
+| project
+    SpecificBucket,
+    OSPlatform,
+    MajorBuild,
+    EosDate,
+    SupportState,
+    Devices,
+    InternetFacingDevices,
+    NotOnboardedDevices,
+    UnsupportedDevices,
+    RiskNote,
+    Notes
+| order by
+    case(SupportState=="Out of support", 0,
+         SupportState has "EOL within", 1,
+         SupportState=="Supported (known lifecycle)", 2,
+         3) asc,
+    OSPlatform asc,
+    MajorBuild asc
