@@ -1,8 +1,8 @@
 CatalogKey,SpecificBucket,OSPlatform,MajorBuild,EosDate,Notes,CollapseGroup
-win7,"Windows 7, 8, 8.1",Windows7,,2020-01-14,,old_windows_7_8_81
-win8,"Windows 7, 8, 8.1",Windows8,,2020-01-14,,old_windows_7_8_81
-win81blue,"Windows 7, 8, 8.1",Windows8Blue,,2020-01-14,,old_windows_7_8_81
-win81,"Windows 7, 8, 8.1",Windows8.1,,2020-01-14,,old_windows_7_8_81
+win7,"Windows 7, 8, 8.1",Windows7,,2020-01-14,,"Windows 7,8,8.1"
+win8,"Windows 7, 8, 8.1",Windows8,,2020-01-14,,"Windows 7,8,8.1"
+win81blue,"Windows 7, 8, 8.1",Windows8Blue,,2020-01-14,,"Windows 7,8,8.1"
+win81,"Windows 7, 8, 8.1",Windows8.1,,2020-01-14,,"Windows 7,8,8.1"
 win10_1607,"Windows 10 1607–2004, 20H2, 21H1",Windows10,14393,2025-10-14,"1607 legacy",
 win10_1703,"Windows 10 1607–2004, 20H2, 21H1",Windows10,15063,2025-10-14,"1703 legacy",
 win10_1709,"Windows 10 1607–2004, 20H2, 21H1",Windows10,16299,2025-10-14,"1709 legacy",
