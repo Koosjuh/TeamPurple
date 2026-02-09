@@ -1,7 +1,7 @@
 let Today = now();
 let SoonWindow = 365d;
 // Single point of management (GitHub RAW)
-let EolCsvUrl = @"https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/Attack%20Surface%20Management/Devices/End%20of%20Life/EndOfLife.csv";
+let EolCsvUrl = @"https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/Attack%20Surface%20Management/Devices/End%20of%20Life/endoflife.csv";
 // Catalog from CSV
 let OsCatalog =
     externaldata(
