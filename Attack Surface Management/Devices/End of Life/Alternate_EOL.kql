@@ -1,0 +1,101 @@
+let Today = startofday(now());
+let SoonWindow = 365d;
+// Pull your GitHub CSV
+let EOL =
+externaldata(
+    CatalogKey:string,
+    SpecificBucket:string,
+    OSPlatform:string,
+    MajorBuild:string,
+    EosDate:datetime,
+    Notes:string,
+    CollapseGroup:string
+)
+[@"https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/Attack%20Surface%20Management/Devices/End%20of%20Life/endoflife.csv"]
+with(format="csv", ignoreFirstRecord=true)
+| extend
+    MajorBuild_i = toint(MajorBuild),
+    IsLtscRow = iif(tostring(Notes) has "LTSC" or tostring(SpecificBucket) has "LTSC", true, false)
+| project OSPlatform, MajorBuild_i, EosDate, Notes, SpecificBucket, CollapseGroup, IsLtscRow;
+// Base device set: all Active Windows endpoints (Win10/Win11/Server, etc.)
+let Devices =
+    DeviceInfo
+    | where SensorHealthState == "Active"
+    | where DeviceCategory == "Endpoint"
+    | where OSPlatform startswith "Windows"   // keeps Windows 7/8/10/11/Server, etc.
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | extend
+        OSPlatformKey = tostring(OSPlatform),
+        OSBuildKey = toint(OSBuild),
+        OSVersionS = tostring(OSVersion),
+        //IsLtscDevice = iif(OSVersionS has "LTSC" or OSVersionS has "LTSB", true, false),
+        IsInternetFacingL = tolong(iff(tobool(IsInternetFacing), 1, 0)),
+        ExposureLevelS = tostring(coalesce(ExposureLevel, "Unknown"));
+// Prefer exact (OSPlatform + MajorBuild) match; fall back to OSPlatform-only rows when MajorBuild is empty in CSV.
+// Also prefer LTSC rows when the device looks LTSC.
+let Matched =
+(
+    Devices
+    | join kind=leftouter (
+        EOL
+        | where isnotnull(MajorBuild_i)
+    ) on $left.OSPlatformKey == $right.OSPlatform and $left.OSBuildKey == $right.MajorBuild_i
+    //| extend MatchScore = case(
+      //  IsLtscDevice and IsLtscRow, 30,
+      //  (not(IsLtscDevice)) and (not(IsLtscRow)), 20,
+      //  10
+   // )
+)
+| union
+(
+    Devices
+    | join kind=leftouter (
+        EOL
+        | where isnull(MajorBuild_i)
+    ) on $left.OSPlatformKey == $right.OSPlatform
+    | extend MatchScore = 5
+)
+| summarize arg_max(MatchScore, *) by DeviceId
+| extend
+    SupportStatus = case(
+        isnull(EosDate), "UnknownEOL",
+        Today > EosDate, "Unsupported",
+        EosDate <= Today + SoonWindow, "SoonUnsupported",
+        "Supported"
+    );
+// Output: one row per OSPlatform + OSBuild (covers Win10/11 versions and other CSV platforms)
+Matched
+| summarize
+    Total = count(),
+    InternetFacing_1 = countif(IsInternetFacingL == 1),
+    Exposure_Low = countif(ExposureLevelS == "Low"),
+    Exposure_Medium = countif(ExposureLevelS == "Medium"),
+    Exposure_High = countif(ExposureLevelS == "High"),
+    Exposure_Critical = countif(ExposureLevelS == "Critical"),
+    Exposure_Unknown = countif(ExposureLevelS == "Unknown"),
+    Unsupported = countif(SupportStatus == "Unsupported"),
+    SoonUnsupported = countif(SupportStatus == "SoonUnsupported"),
+    Supported = countif(SupportStatus == "Supported"),
+    UnknownEOL = countif(SupportStatus == "UnknownEOL")
+  by OSPlatformKey, OSBuildKey, EosDate, Notes, SpecificBucket, CollapseGroup
+| extend OS = strcat(OSPlatformKey, " (Build ", tostring(OSBuildKey), ")")
+| project
+    OS,
+    OSPlatform = OSPlatformKey,
+    OSBuild = OSBuildKey,
+    EosDate,
+    SupportNotes = Notes,
+    SpecificBucket,
+    CollapseGroup,
+    Total,
+    Unsupported,
+    SoonUnsupported,
+    Supported,
+    UnknownEOL,
+    InternetFacing_1,
+    Exposure_Low,
+    Exposure_Medium,
+    Exposure_High,
+    Exposure_Critical,
+    Exposure_Unknown
+| order by EosDate asc nulls last, OSPlatform asc, OSBuild asc
