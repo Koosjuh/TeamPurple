@@ -1,0 +1,27 @@
+CatalogKey,SpecificBucket,OSPlatform,MajorBuild,EosDate,Notes,CollapseGroup
+win7,"Windows 7, 8, 8.1",Windows7,,2020-01-14,,old_windows_7_8_81
+win8,"Windows 7, 8, 8.1",Windows8,,2020-01-14,,old_windows_7_8_81
+win81blue,"Windows 7, 8, 8.1",Windows8Blue,,2020-01-14,,old_windows_7_8_81
+win81,"Windows 7, 8, 8.1",Windows8.1,,2020-01-14,,old_windows_7_8_81
+win10_1607,"Windows 10 1607–2004, 20H2, 21H1",Windows10,14393,2025-10-14,"1607 legacy",
+win10_1703,"Windows 10 1607–2004, 20H2, 21H1",Windows10,15063,2025-10-14,"1703 legacy",
+win10_1709,"Windows 10 1607–2004, 20H2, 21H1",Windows10,16299,2025-10-14,"1709 legacy",
+win10_1803,"Windows 10 1607–2004, 20H2, 21H1",Windows10,17134,2025-10-14,"1803 legacy",
+win10_1809,"Windows 10 1607–2004, 20H2, 21H1",Windows10,17763,2025-10-14,"1809 legacy",
+win10_1903,"Windows 10 1607–2004, 20H2, 21H1",Windows10,18362,2025-10-14,"1903 legacy",
+win10_1909,"Windows 10 1607–2004, 20H2, 21H1",Windows10,18363,2025-10-14,"1909 legacy",
+win10_2004,"Windows 10 1607–2004, 20H2, 21H1",Windows10,19041,2025-10-14,"2004 legacy",
+win10_20h2,"Windows 10 1607–2004, 20H2, 21H1",Windows10,19042,2025-10-14,"20H2 legacy",
+win10_21h1,"Windows 10 1607–2004, 20H2, 21H1",Windows10,19043,2025-10-14,"21H1 legacy",
+win10_21h2,"Windows 10 21H2",Windows10,19044,2024-06-11,"21H2 GA (Ent/Edu)",
+win10_21h2_ltsc2021,"Windows 10 21H2 (LTSC 2021 exception)",Windows10,19044,2027-01-12,"LTSC 2021 support to 2027-01-12",
+win10_22h2,"Windows 10 22H2",Windows10,19045,2025-10-14,"22H2",
+win11_21h2,"Windows 11 21H2",Windows11,22000,2024-10-08,"21H2",
+win11_22h2,"Windows 11 22H2",Windows11,22621,2025-10-14,"22H2",
+win11_23h2,"Windows 11 23H2",Windows11,22631,2026-11-10,"23H2",
+win11_24h2,"Windows 11 24H2",Windows11,26100,2027-10-12,"24H2",
+srv2008,"Windows Server 2008 / 2008 R2",WindowsServer2008,,2020-01-14,,
+srv2008r2,"Windows Server 2008 / 2008 R2",WindowsServer2008R2,,2020-01-14,,
+srv2012r2,"Windows Server 2012 R2 (ESU ends 2026-10-13)",WindowsServer2012R2,,2026-10-13,"Extended ended 2023-10-10; ESU to 2026-10-13",
+srv2016,"Windows Server 2016",WindowsServer2016,,2027-01-12,,
+srv2019,"Windows Server 2019",WindowsServer2019,,2029-01-09,,
