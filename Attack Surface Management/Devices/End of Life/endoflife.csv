@@ -20,8 +20,8 @@ win11_21h2,"Windows 11 21H2",Windows11,22000,2024-10-08,"21H2",
 win11_22h2,"Windows 11 22H2",Windows11,22621,2025-10-14,"22H2",
 win11_23h2,"Windows 11 23H2",Windows11,22631,2026-11-10,"23H2",
 win11_24h2,"Windows 11 24H2",Windows11,26100,2027-10-12,"24H2",
-srv2008,"Windows Server 2008 / 2008 R2",WindowsServer2008,,2020-01-14,,Windows Server 2008 (incl R2)
-srv2008r2,"Windows Server 2008 / 2008 R2",WindowsServer2008R2,,2020-01-14,,Windows Server 2008 (incl R2)
+srv2008,"Windows Server 2008 / 2008 R2",WindowsServer2008,,2020-01-14,,Windows Server 2008 (R2)
+srv2008r2,"Windows Server 2008 / 2008 R2",WindowsServer2008R2,,2020-01-14,,Windows Server 2008 (R2)
 srv2012r2,"Windows Server 2012 R2 (ESU ends 2026-10-13)",WindowsServer2012R2,,2026-10-13,"Extended ended 2023-10-10; ESU to 2026-10-13",
 srv2016,"Windows Server 2016",WindowsServer2016,,2027-01-12,,
 srv2019,"Windows Server 2019",WindowsServer2019,,2029-01-09,,
