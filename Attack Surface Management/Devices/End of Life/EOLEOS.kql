@@ -76,15 +76,33 @@ let DeviceTagged =
     )
     // Guard against duplicates caused by OSPlatform-only matches + build matches
     | summarize arg_max(EosDate, *) by DeviceId;
-// Summarize counts per catalog row
-let Counts =
-    DeviceTagged
-    | where isnotempty(CatalogKey)
+let UnsupportedRowCounts =
+    Devices
+    | where tolower(OnboardingStatus) == "unsupported"
     | summarize
         Devices = dcount(DeviceId),
         InternetFacingDevices = dcountif(DeviceId, IsInternetFacing),
         UnsupportedDevices = dcountif(DeviceId, IsMDEUnsupported),
         NotOnboardedDevices = dcountif(DeviceId, IsNotOnboarded and not(IsMDEUnsupported))
+    | extend CatalogKey = "mde_unsupported";
+// Summarize counts per catalog row
+let Counts =
+    (
+        DeviceTagged
+        | where isnotempty(CatalogKey)
+        | summarize
+            Devices = dcount(DeviceId),
+            InternetFacingDevices = dcountif(DeviceId, IsInternetFacing),
+            UnsupportedDevices = dcountif(DeviceId, IsMDEUnsupported),
+            NotOnboardedDevices = dcountif(DeviceId, IsNotOnboarded and not(IsMDEUnsupported))
+          by CatalogKey
+    )
+    | union UnsupportedRowCounts
+    | summarize
+        Devices = sum(Devices),
+        InternetFacingDevices = sum(InternetFacingDevices),
+        UnsupportedDevices = sum(UnsupportedDevices),
+        NotOnboardedDevices = sum(NotOnboardedDevices)
       by CatalogKey;
 // Join counts onto catalog so all rows always appear
 let FullTable =
