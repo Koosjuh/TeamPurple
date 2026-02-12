@@ -1,13 +1,13 @@
 Sort,OsRow,OSPlatform,OSVersion,EOS,Notes,RowType
-10,"Windows 7, 8 and 8.1","Windows7","*",2020-01-14,,
-10,"Windows 7, 8 and 8.1","Windows8","*",2020-01-14,,
-10,"Windows 7, 8 and 8.1","Windows8Blue","*",2020-01-14,,
-20,"Windows 10","Windows10","*",2025-10-14,"GA channel; final Win10 feature update = 22H2",
-21,"Windows 10 Enterprise LTSC 2021 (21H2)","Windows10","21H2",2027-01-12,"LTSC edition",
-30,"Windows 11 version 21H2","Windows11","21H2",2024-10-08,,
-31,"Windows 11 version 22H2","Windows11","22H2",2025-10-14,,
-40,"Windows Server 2008 R2","WindowsServer2008R2","*",2020-01-14,,
-41,"Windows Server 2012 R2","WindowsServer2012R2","*",2023-10-10,"Extended Support ended; ESU may apply",
-42,"Windows Server 2016","WindowsServer2016","*",2027-01-12,"Extended support ends 2027-01-12",
-43,"Windows Server 2019","WindowsServer2019","*",2029-01-09,"Extended support ends 2029-01-09",
-90,"MDE unsupported devices","*","*",,"healthStatuses=Active,onBoardingStatuses=Unsupported","MDE_UNSUPPORTED"
+10,"Windows 7, 8 and 8.1","Windows7","*",2020-01-14,,"OS_EOF"
+10,"Windows 7, 8 and 8.1","Windows8","*",2020-01-14,,"OS_EOF"
+10,"Windows 7, 8 and 8.1","Windows8Blue","*",2020-01-14,,"OS_EOF"
+20,"Windows 10","Windows10","*",2025-10-14,"GA channel; final Win10 feature update = 22H2","OS_EOF"
+21,"Windows 10 Enterprise LTSC 2021 (21H2)","Windows10","21H2",2027-01-12,"LTSC edition","OS_EOF"
+30,"Windows 11 version 21H2","Windows11","21H2",2024-10-08,,"OS_EOF"
+31,"Windows 11 version 22H2","Windows11","22H2",2025-10-14,,"OS_EOF"
+40,"Windows Server 2008 R2","WindowsServer2008R2","*",2020-01-14,,"OS_EOF"
+41,"Windows Server 2012 R2","WindowsServer2012R2","*",2023-10-10,"Extended Support ended; ESU may apply","OS_EOF"
+42,"Windows Server 2016","WindowsServer2016","*",2027-01-12,"Extended support ends 2027-01-12","OS_EOF"
+43,"Windows Server 2019","WindowsServer2019","*",2029-01-09,"Extended support ends 2029-01-09","OS_EOF"
+90,"MDE unsupported devices","*","*",,"healthStatuses!=Active,onBoardingStatuses=Unsupported","MDE_UNSUPPORTED"
