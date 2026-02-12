@@ -1,0 +1,106 @@
+let Lookback = 30d;
+let Today = now();
+let EolSoonDays = 180;
+let OsMap =
+    externaldata(Sort:int, OsRow:string, OSPlatform:string, OSVersion:string, EOS:datetime, Notes:string, RowType:string)
+    ["https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/Attack%20Surface%20Management/Devices/End%20of%20Life/os-eol-map.csv"]
+    with(format="csv", ignoreFirstRecord=true);
+// Collapse to one row per report label (Windows 7/8/8.1 becomes 1 row)
+let OsRows =
+    OsMap
+    | where RowType !~ "MDE_UNSUPPORTED"
+    | summarize
+        Sort = min(Sort),
+        EOS  = min(EOS),
+        Notes = tostring(take_any(Notes))
+      by OsRow;
+let BaseDevices =
+    DeviceInfo
+    | where Timestamp > ago(Lookback)
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | extend
+        OSPlatform_ = tostring(OSPlatform),
+        OSVersion_  = tostring(OSVersion),
+        Health_     = tostring(column_ifexists("SensorHealthState", column_ifexists("HealthStatus", ""))),
+        Exposure_   = tostring(column_ifexists("ExposureLevel", "")),
+        Internet_   = tostring(column_ifexists("IsInternetFacing", "")),
+        Onboarding_ = tostring(column_ifexists("OnboardingStatus", "")),
+        DeviceCategory_ = tostring(column_ifexists("DeviceCategory", ""))  // used for MDE unsupported endpoints
+    | project DeviceId, OSPlatform_, OSVersion_, Health_, Exposure_, Internet_, Onboarding_, DeviceCategory_;
+// OS rows aggregation
+let PerDevice =
+    BaseDevices
+    | join kind=inner (
+        OsMap
+        | where RowType !~ "MDE_UNSUPPORTED"
+        | project OsRow, OSPlatform, OSVersion
+    ) on $left.OSPlatform_ == $right.OSPlatform
+    | where OSVersion == "*" or OSVersion_ == OSVersion
+    | extend
+        IsActive = Health_ =~ "Active",
+        IsHigh = tolower(Exposure_) == "high",
+        IsMed  = tolower(Exposure_) == "medium",
+        IsLow  = tolower(Exposure_) == "low",
+        IsNone = isempty(Exposure_) or tolower(Exposure_) == "none",
+        IsInternet = tolower(Internet_) in ("true","1","yes"),
+        IsNotOnboarded = Onboarding_ =~ "Can be onboarded";
+let Agg =
+    PerDevice
+    | summarize
+        ActiveTotal     = dcountif(DeviceId, IsActive),
+        ExposureHigh    = dcountif(DeviceId, IsHigh),
+        ExposureMedium  = dcountif(DeviceId, IsMed),
+        ExposureLow     = dcountif(DeviceId, IsLow),
+        ExposureNone    = dcountif(DeviceId, IsNone),
+        InternetFacing  = dcountif(DeviceId, IsInternet),
+        NotOnboarded    = dcountif(DeviceId, IsNotOnboarded)
+      by OsRow;
+// MDE unsupported devices (match your validation query)
+let MdeUnsupportedRow =
+    BaseDevices
+    | where Onboarding_ == "Unsupported"
+    | where DeviceCategory_ == "Endpoint"
+    | summarize
+        Sort = 90,
+        OSVersion = "MDE unsupported devices",
+        SupportStatus = "Not applicable",
+        EOS = datetime(null),
+        ActiveTotal = dcount(DeviceId),
+        ExposureBreakdown = "Not applicable",
+        InternetFacing = dcountif(DeviceId, tolower(Internet_) in ("true","1","yes")),
+        NotOnboarded = 0,
+        Notes = "OnboardingStatus=Unsupported AND DeviceCategory=Endpoint";
+(
+    OsRows
+    | join kind=leftouter Agg on OsRow
+    | extend
+        ActiveTotal = coalesce(ActiveTotal, 0),
+        ExposureHigh = coalesce(ExposureHigh, 0),
+        ExposureMedium = coalesce(ExposureMedium, 0),
+        ExposureLow = coalesce(ExposureLow, 0),
+        ExposureNone = coalesce(ExposureNone, 0),
+        InternetFacing = coalesce(InternetFacing, 0),
+        NotOnboarded = coalesce(NotOnboarded, 0),
+        ExposureBreakdown = strcat(
+            "High: ", ExposureHigh,
+            ", Medium: ", ExposureMedium,
+            ", Low: ", ExposureLow,
+            ", None: ", ExposureNone
+        ),
+        SupportStatus = case(
+            EOS < Today, "Out of support",
+            EOS < (Today + EolSoonDays*1d), "EOL soon",
+            "Supported"
+        )
+    | project
+        Sort,
+        OSVersion = OsRow,
+        SupportStatus,
+        EOS,
+        ActiveTotal,
+        ExposureBreakdown,
+        InternetFacing,
+        NotOnboarded,
+        Notes
+)
+| union (MdeUnsupportedRow | project Sort, OSVersion, SupportStatus, EOS, ActiveTotal, ExposureBreakdown, InternetFacing, NotOnboarded, Notes)
