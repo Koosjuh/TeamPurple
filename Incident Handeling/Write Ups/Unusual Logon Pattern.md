@@ -9,9 +9,9 @@ The affected system was confirmed to be internet‑facing, and similar alerts in
 The primary goal of the triage was to determine whether the observed activity resulted in a successful authentication or system compromise, and to identify which service was being targeted.
 
 #### IP
-https://scamalytics.com/
-https://www.abuseipdb.com/
-https://spur.us/
+- https://scamalytics.com/
+- https://www.abuseipdb.com/
+- https://spur.us/
 
 Were used to identify that it was a known malicious IP, most likely a host and no VPN provider.
 
