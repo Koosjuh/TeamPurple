@@ -1,0 +1,17 @@
+```kql
+let scid_map = externaldata(Recommendation:string, SCID:string)
+["https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/other-recommendations-comma.csv"]
+with(format='csv', delimiter=',', ignoreFirstRecord=true);
+DeviceTvmSecureConfigurationAssessment
+| where Timestamp > ago(30d)
+| extend ConfigurationId = tolower(trim(" ", ConfigurationId))
+| join kind=inner (
+    scid_map
+    | extend SCID = tolower(trim(" ", SCID))
+) on $left.ConfigurationId == $right.SCID
+| summarize NonCompliantDevices = dcountif(DeviceId, IsCompliant == false)
+    by Recommendation, ConfigurationCategory, ConfigurationSubcategory
+| where NonCompliantDevices > 0
+| extend Category = iif(isempty(ConfigurationSubcategory), ConfigurationCategory, strcat(ConfigurationCategory, " - ", ConfigurationSubcategory))
+| project Recommendation, Category, ["Non Compliant Devices"] = NonCompliantDevices
+```
