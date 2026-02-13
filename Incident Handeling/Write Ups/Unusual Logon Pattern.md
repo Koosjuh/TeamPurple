@@ -8,33 +8,63 @@ The affected system was confirmed to be internet‑facing, and similar alerts in
 ### Triage and Investigation Performed
 The primary goal of the triage was to determine whether the observed activity resulted in a successful authentication or system compromise, and to identify which service was being targeted.
 
+#### IP
+https://scamalytics.com/
+https://www.abuseipdb.com/
+https://spur.us/
+
+Were used to identify that it was a known malicious IP, most likely a host and no VPN provider.
+
 #### Authentication Review
 The following authentication checks were performed:
 
 ##### Endpoint authentication logs were reviewed.
 All observed logon attempts resulted in failed authentication events.
-No successful logons were identified.
-No evidence of interactive user sessions, lateral movement, persistence mechanisms, or follow‑up malicious activity was observed.
 
+```kql
+DeviceLogonEvents
+| where DeviceName == "HOST" and RemoteIP == "IP"
+```
+
+No successful logons were identified.
 This confirmed that no account compromise occurred during the observed activity.
+
+No evidence of interactive user sessions, lateral movement, persistence mechanisms, or follow‑up malicious activity was observed.
+[DeviceTimeline]
 
 ##### Service and Protocol Analysis
 Further investigation focused on identifying the exposed service responsible for the alert.
 
+```kql
+search "IP"
+```
+
+```kql
+DeviceEvents
+| where * == "IP"
+```
+
 Endpoint telemetry showed repeated Remote Desktop connection attempts against the host.
 Network telemetry confirmed multiple inbound connections accepted by the system.
 All inbound connections were associated with the Windows Terminal Services process, confirming the use of Remote Desktop Protocol (RDP).
+
+```kql
+DeviceNetworkEvents
+| where * contains "IP"
+```
 
 This established that the Remote Desktop service was the targeted attack surface.
 
 ##### Correlation and Behavioral Assessment
 Correlating authentication, network, and service telemetry revealed the following consistent pattern:
 
-External systems initiated connections to the Remote Desktop service.
-The service accepted inbound TCP connections.
-Authentication attempts were made repeatedly.
-All authentication attempts failed.
-No Remote Desktop sessions were successfully established.
+Using DeviceNetworkEvents and DeviceEvents
+
+- External systems initiated connections to the Remote Desktop service.
+- The service accepted inbound TCP connections.
+- Authentication attempts were made repeatedly.
+- All authentication attempts failed.
+- No Remote Desktop sessions were successfully established.
 
 This behavior is consistent with automated external scanning and brute‑force attempts against an internet‑facing RDP service.
 At the time of investigation, Network Level Authentication (NLA) was not enabled on the host. Without NLA, the full RDP authentication flow is exposed, making the service more susceptible to repeated credential‑guessing attempts and increasing alert frequency.
@@ -79,5 +109,4 @@ This case illustrates that:
 
 - Security alerts do not require a breach to be valid
 - Internet‑facing services will attract hostile attention
-- Effective triage differentiates attempted attacks from successful compromise
-- Risk reduction often requires architectural decisions, not just endpoint configuration
+- MxDR can mean more than just detect and response. It can also be a valid partner to discuss and evaluate security findings. 
