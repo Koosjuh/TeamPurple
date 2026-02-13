@@ -10,5 +10,6 @@
   - [SHA256] 
     - [DeviceFileEvents] 
     - [DeviceProcessEvents] 
-    - [DeviceEvents]
+    - [DeviceEvents
+  - [VirusTotal]
 ```
