@@ -108,5 +108,5 @@ The case was discussed with the appropriate operational teams, and follow‑up a
 This case illustrates that:
 
 - Security alerts do not require a breach to be valid
-- Internet‑facing services will attract hostile attention
+- Internet‑facing services will attract hostile attention (duh)
 - MxDR can mean more than just detect and response. It can also be a valid partner to discuss and evaluate security findings. 
