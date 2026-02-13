@@ -1,0 +1,45 @@
+let LatestDevice =
+    DeviceInfo
+    | summarize arg_max(Timestamp, *) by DeviceId;
+let ActiveDevices =
+    LatestDevice
+    | where SensorHealthState has "Active";
+let ExposureCounts =
+    ActiveDevices
+    | extend ExposureLevelNorm = case(
+        ExposureLevel in~ ("High","Medium","Low"), ExposureLevel,
+        ExposureLevel =~ "None", "No Data Available",
+        "No Data Available"
+    )
+    | summarize NrOfActiveDevices = dcount(DeviceId) by ExposureLevelNorm;
+let InternetFacingCount =
+    ActiveDevices
+    | where IsInternetFacing == true
+    | summarize NrOfActiveDevices = dcount(DeviceId)
+    | extend ExposureLevelNorm = "All levels, internet facing";
+let Counts =
+    ExposureCounts
+    | union InternetFacingCount
+    | extend Sort = case(
+        ExposureLevelNorm == "High", 1,
+        ExposureLevelNorm == "Medium", 2,
+        ExposureLevelNorm == "Low", 3,
+        ExposureLevelNorm == "No Data Available", 4,
+        ExposureLevelNorm == "All levels, internet facing", 5,
+        99
+    )
+    | project ExposureLevel = ExposureLevelNorm, Sort, NrOfActiveDevices;
+// Fixed rows with zero values
+let Rows =
+    datatable(ExposureLevel:string, Sort:int, NrOfActiveDevices:long)
+    [
+      "High", 1, 0,
+      "Medium", 2, 0,
+      "Low", 3, 0,
+      "No Data Available", 4, 0,
+      "All levels, internet facing", 5, 0
+    ];
+Rows
+| union Counts
+| summarize NrOfActiveDevices = max(NrOfActiveDevices) by ExposureLevel
+| project ExposureLevel, NrOfActiveDevices
