@@ -51,13 +51,7 @@ DeviceNetworkEvents
 | where * contains "IP"
 ```
 
-Results showed repeated: 
-- ActionType = InboundConnectionAccepted
-- Protocol = Tcp
-- LocalPort = 3389
-- Initiating process: svchost.exe -k termsvcs -s TermService
-
-This confirms the Windows Remote Desktop Service (TermService) accepted inbound TCP connections on port 3389. 
+Results showed repeated events.
 
 Example validated event: 
 - LocalPort = 3389
@@ -66,7 +60,7 @@ Example validated event:
 - InitiatingProcessFileName = svchost.exe
 - InitiatingProcessCommandLine = svchost.exe -k termsvcs -s TermService
 
-This establishes that RDP was internet-reachable and accepting inbound connections. 
+This establishes that RDP was internet-reachable and accepting inbound connections. Tthe Windows Remote Desktop Service (TermService) accepted inbound TCP connections on port 3389. 
 
 ---
 
