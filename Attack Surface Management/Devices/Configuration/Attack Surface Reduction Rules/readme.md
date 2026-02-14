@@ -95,3 +95,6 @@ ASR evolves over time (new SCIDs, new rules). To update the TVM query list of SC
 DeviceTvmSecureConfigurationAssessmentKB
 | where ConfigurationDescription contains "ASR"
 | distinct ConfigurationId
+```
+
+And for the GUID's please see: https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference#asr-rule-to-guid-matrix
