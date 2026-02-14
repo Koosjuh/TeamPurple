@@ -227,6 +227,7 @@ This case demonstrates that:
   ### Triage Conclusion
 The device xx-test is directly exposed to the internet with TCP 3389 (Remote Desktop) accessible externally. Multiple external IP addresses with malicious reputation performed automated scanning and credential brute-force attempts. Inbound RDP TCP connections were accepted by the Windows Terminal Services process. All observed authentication attempts failed. Only LogonType = Network NTLM failures were recorded. No RemoteInteractive logon attempts or successful authentications were identified. No evidence of interactive RDP session establishment or compromise was found. The activity is assessed as automated hostile scanning against an exposed RDP service with no impact to the system. During our upcoming bi-monthly Threat Vulnerability Management session, this configuration will be reviewed to assess:
 - The functional purpose of the system.
+  - Noting the name 'Test' used in a production environment, internet facing. 
 - The business requirement for direct internet exposure.
 - Whether continuous 24/7 accessibility is necessary.
 - The appropriateness of enabling Network Level Authentication (NLA).
