@@ -111,7 +111,8 @@ The observed behavior indicates:
 - No evidence supports that an interactive RDP session reached the Windows logon UI.
 
 Although Network Level Authentication (NLA) was confirmed not to be enabled on the host, the telemetry does not demonstrate that attackers progressed to interactive credential submission over RDP. The pattern is consistent with: 
-- Automated RDP port scanning - Credential spraying over NTLM
+- Automated RDP port scanning
+- Credential spraying over NTLM
 - Automated brute-force infrastructure
 
 The activity reflects background internet attack noise targeting exposed services. The authentication failures were recorded as LogonType = Network (Windows Logon Type 3) using NTLM. Interactive RDP logons generate LogonType = RemoteInteractive (Type 10). No Type 10 events were observed for the investigated IPs. Network telemetry confirmed that the only inbound accepted service from these IPs was TCP 3389 (Remote Desktop). No inbound connections to SMB (445) or other NTLM-enabled services were observed.
