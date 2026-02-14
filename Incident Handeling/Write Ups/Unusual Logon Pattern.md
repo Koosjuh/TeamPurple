@@ -77,13 +77,13 @@ Additional correlation was performed to determine whether RDP connections progre
 let Lookback = 14d;
 let TargetDevice = "xx-test";
 let SuspectIPs = dynamic(["IP","IP","IP"]);
-DeviceLogonEvents
-| where Timestamp >= ago(Lookback)
-| where DeviceName == TargetDevice
-| where RemoteIP in (SuspectIPs)
-| summarize Count=count(), FirstSeen=min(Timestamp), LastSeen=max(Timestamp)
-  by RemoteIP, LogonType, ActionType, Protocol, FailureReason
-| order by RemoteIP asc
+  DeviceLogonEvents
+    | where Timestamp >= ago(Lookback)
+    | where DeviceName == TargetDevice
+    | where RemoteIP in (SuspectIPs)
+    | summarize Count=count(), FirstSeen=min(Timestamp), LastSeen=max(Timestamp)
+      by RemoteIP, LogonType, ActionType, Protocol, FailureReason
+    | order by RemoteIP asc
 ```
 
 Findings: 
