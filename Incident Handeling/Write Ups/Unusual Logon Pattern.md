@@ -33,7 +33,13 @@ DeviceLogonEvents
 | where DeviceName == "HOST" and RemoteIP == "IP"
 ```
 
-All observed authentication attempts resulted in: - ActionType = LogonFailed - FailureReason = InvalidUserNameOrPassword - LogonType = Network - Protocol = NTLM No successful logons were identified. No LogonType = RemoteInteractive events were observed for the investigated IPs. This confirms: - No successful RDP authentication - No interactive Remote Desktop session - No account compromise during the observed timeframe No evidence of lateral movement, persistence, privilege escalation, or follow-up malicious activity was identified in DeviceTimeline. RDP accepted inbound connections on TCP/3389. Authentication telemetry for the same source IPs showed only failed Network logons using NTLM and no RemoteInteractive logons, indicating that connection attempts did not progress to a successful interactive RDP session. --- ## Service and Protocol Analysis To identify the targeted service, network telemetry was reviewed.
+All observed authentication attempts resulted in: - ActionType = LogonFailed - FailureReason = InvalidUserNameOrPassword - LogonType = Network - Protocol = NTLM No successful logons were identified. 
+
+No LogonType = RemoteInteractive events were observed for the investigated IPs. This confirms: - No successful RDP authentication - No interactive Remote Desktop session - No account compromise during the observed timeframe No evidence of lateral movement, persistence, privilege escalation, or follow-up malicious activity was identified in DeviceTimeline. RDP accepted inbound connections on TCP/3389. Authentication telemetry for the same source IPs showed only failed Network logons using NTLM and no RemoteInteractive logons, indicating that connection attempts did not progress to a successful interactive RDP session. 
+
+--- 
+
+## Service and Protocol Analysis To identify the targeted service, network telemetry was reviewed.
 
 ```kql
 search "IP"
@@ -115,7 +121,9 @@ Although Network Level Authentication (NLA) was confirmed not to be enabled on t
 - Credential spraying over NTLM
 - Automated brute-force infrastructure
 
-The activity reflects background internet attack noise targeting exposed services. The authentication failures were recorded as LogonType = Network (Windows Logon Type 3) using NTLM. Interactive RDP logons generate LogonType = RemoteInteractive (Type 10). No Type 10 events were observed for the investigated IPs. Network telemetry confirmed that the only inbound accepted service from these IPs was TCP 3389 (Remote Desktop). No inbound connections to SMB (445) or other NTLM-enabled services were observed.
+The activity reflects background internet attack noise targeting exposed services. The authentication failures were recorded as LogonType = Network (Windows Logon Type 3) using NTLM. Interactive RDP logons generate LogonType = RemoteInteractive (Type 10). No Type 10 events were observed for the investigated IPs. Network telemetry confirmed that the only inbound accepted service from these IPs was TCP 3389 (Remote Desktop). 
+
+No inbound connections to SMB (445) or other NTLM-enabled services were observed.
 
 ```kql
 DeviceNetworkEvents
@@ -221,7 +229,10 @@ This case demonstrates that:
   ---
   
   ### Triage Conclusion
-The device xx-test is directly exposed to the internet with TCP 3389 (Remote Desktop) accessible externally. Multiple external IP addresses with malicious reputation performed automated scanning and credential brute-force attempts. Inbound RDP TCP connections were accepted by the Windows Terminal Services process. All observed authentication attempts failed. Only LogonType = Network NTLM failures were recorded. No RemoteInteractive logon attempts or successful authentications were identified. No evidence of interactive RDP session establishment or compromise was found. The activity is assessed as automated hostile scanning against an exposed RDP service with no impact to the system. During our upcoming bi-monthly Threat Vulnerability Management session, this configuration will be reviewed to assess:
+The device xx-test is directly exposed to the internet with TCP 3389 (Remote Desktop) accessible externally. Multiple external IP addresses with malicious reputation performed automated scanning and credential brute-force attempts. Inbound RDP TCP connections were accepted by the Windows Terminal Services process. All observed authentication attempts failed. Only LogonType = Network NTLM failures were recorded. 
+
+No RemoteInteractive logon attempts or successful authentications were identified. No evidence of interactive RDP session establishment or compromise was found. The activity is assessed as automated hostile scanning against an exposed RDP service with no impact to the system. During our upcoming bi-monthly Threat Vulnerability Management session, this configuration will be reviewed to assess:
+
 - The functional purpose of the system.
   - Noting the name 'Test' used in a production environment, internet facing. 
 - The business requirement for direct internet exposure.
