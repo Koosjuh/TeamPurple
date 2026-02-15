@@ -2,6 +2,20 @@
 
 This document describes three validation methods for Attack Surface Reduction (ASR) posture on endpoints and explains why results can differ from what you see in the Microsoft Defender portal ASR configuration UI.
 
+# Index
+
+1. [Overview](#overview)  
+2. [Query 1: TVM ASR Posture (Effective Device Security State)](#query-1-tvm-asr-posture-effective-device-security-state)  
+3. [Query 2: Registry ASR Policy Evidence (Policy Manager ASRRules)](#query-2-registry-asr-policy-evidence-policy-manager-asrrules)  
+4. [Script 1: PowerShell ASR Effective State (Local Defender Engine)](#script-1-powershell-asr-effective-state-local-defender-engine)  
+5. [How to Interpret Results](#how-to-interpret-results)  
+6. [Authority and Trust Hierarchy](#authority-and-trust-hierarchy)  
+7. [Why the GUI Can Differ (security.microsoft.com/asr)](#why-the-gui-can-differ-securitymicrosoftcomasr)  
+8. [How to Keep These Queries Updated](#how-to-keep-these-queries-updated)  
+9. [References (Microsoft)](#references-microsoft)
+
+---
+
 ## Overview
 
 There are three different questions you may want to answer:
