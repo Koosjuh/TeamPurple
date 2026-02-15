@@ -35,7 +35,14 @@ DeviceLogonEvents
 
 All observed authentication attempts resulted in: - ActionType = LogonFailed - FailureReason = InvalidUserNameOrPassword - LogonType = Network - Protocol = NTLM No successful logons were identified. 
 
-No LogonType = RemoteInteractive events were observed for the investigated IPs. This confirms: - No successful RDP authentication - No interactive Remote Desktop session - No account compromise during the observed timeframe No evidence of lateral movement, persistence, privilege escalation, or follow-up malicious activity was identified in DeviceTimeline. RDP accepted inbound connections on TCP/3389. Authentication telemetry for the same source IPs showed only failed Network logons using NTLM and no RemoteInteractive logons, indicating that connection attempts did not progress to a successful interactive RDP session. 
+No LogonType = RemoteInteractive events were observed for the investigated IPs. 
+
+This confirms: 
+- No successful RDP authentication
+- No interactive Remote Desktop session
+- No account compromise during the observed timeframe No evidence of lateral movement, persistence, privilege escalation, or follow-up malicious activity was identified in DeviceTimeline.
+
+RDP accepted inbound connections on TCP/3389. Authentication telemetry for the same source IPs showed only failed Network logons using NTLM and no RemoteInteractive logons, indicating that connection attempts did not progress to a successful interactive RDP session. 
 
 --- 
 
@@ -66,7 +73,7 @@ Example validated event:
 - InitiatingProcessFileName = svchost.exe
 - InitiatingProcessCommandLine = svchost.exe -k termsvcs -s TermService
 
-This establishes that RDP was internet-reachable and accepting inbound connections. Tthe Windows Remote Desktop Service (TermService) accepted inbound TCP connections on port 3389. 
+This establishes that RDP was internet-reachable and accepting inbound connections. The Windows Remote Desktop Service (TermService) accepted inbound TCP connections on port 3389. 
 
 ---
 
@@ -75,11 +82,10 @@ This establishes that RDP was internet-reachable and accepting inbound connectio
 Additional correlation was performed to determine whether RDP connections progressed to interactive authentication.
 
 ```kql
-let Lookback = 14d;
 let TargetDevice = "xx-test";
 let SuspectIPs = dynamic(["IP","IP","IP"]);
   DeviceLogonEvents
-    | where Timestamp >= ago(Lookback)
+    | where Timestamp >= ago(14d)
     | where DeviceName == TargetDevice
     | where RemoteIP in (SuspectIPs)
     | summarize Count=count(), FirstSeen=min(Timestamp), LastSeen=max(Timestamp)
