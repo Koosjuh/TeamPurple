@@ -1,4 +1,3 @@
-let Lookback = 30d;
 let AsrPolicyKey = @"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager";
 let AsrPolicyValue = "ASRRules";
 let AsrGuidMap = datatable(RuleGuid:string, RuleName:string)
@@ -25,7 +24,7 @@ let AsrGuidMap = datatable(RuleGuid:string, RuleName:string)
 ];
 let LatestPolicyPerDevice =
 DeviceRegistryEvents
-| where Timestamp >= ago(Lookback)
+| where Timestamp >= ago(30d)
 | where ActionType in ("RegistryValueSet","RegistryValueModified")
 | where RegistryKey == AsrPolicyKey
 | where RegistryValueName == AsrPolicyValue
