@@ -38,6 +38,7 @@ This represents Defender Vulnerability Management (TVM) secure configuration ass
 ### Notes
 - This is a “secure configuration assessment” view, not a “policy object” view.
 - It helps answer what posture Defender reports regardless of how it was deployed.
+- Strong indicator of cloud‑assessed posture at **last assessment**, not a guaranteed real‑time enforcement view.
 
 ---
 
@@ -82,6 +83,46 @@ Reads the Defender engine resolved ASR configuration from `Get-MpPreference` and
 
 ### What it answers
 - What action does the Defender engine believe is configured for each ASR rule right now?
+
+---
+
+## When to Trust Which Signal (Decision Guide)
+Because ASR state is represented in multiple planes, no single signal should be treated as absolute truth. Use the guidance below to decide which source to trust based on your question.
+
+**If you want to know what Defender is actually enforcing on the device**
+
+Trust: PowerShell (Get-MpPreference)
+Why: This reflects the Defender engine–resolved configuration after all policies, merges, conflicts, and defaults are applied. It is the closest available view to the real enforcement state without triggering an ASR event.
+
+Caveats:
+- Does not show why a rule is set that way
+- Does not account for runtime exclusions (certificate, hash, path)
+
+**If you want to know whether ASR was deployed via policy**
+
+Trust: Registry policy evidence (Policy Manager\\ASRRules)
+Why: Presence of ASR rule GUIDs in policy-backed registry locations is strong proof of configuration intent. It confirms that a management channel (MDM, GPO, etc.) explicitly wrote the setting to the device.
+
+Caveats:
+- Policy presence ≠ effective enforcement
+- A rule can exist in policy but be overridden or merged differently by the engine
+
+**If you want to know what Defender reports as security posture**
+
+Trust: TVM Secure Configuration Assessment
+Why: TVM reflects Defender’s cloud-assessed security posture, including applicability and compliance, independent of how the rule was deployed. This is the authoritative source for exposure scoring and Secure Score impact.
+
+Caveats:
+- Not real-time (assessment latency applies)
+- Represents assessment outcome, not raw policy or engine state
+
+### Summary Rule of Thumb
+
+**Enforcement truth**: PowerShell (Get-MpPreference)
+**Deployment proof:** Registry policy telemetry
+**Posture & reporting:** TVM Secure Configuration Assessment
+
+Use all three together when troubleshooting discrepancies between policy, device behavior, and portal UI.
 - Which rules exist on the device that are not in your local mapping (shown as `Unknown / New Rule`)?
 
 ### Why this matters
