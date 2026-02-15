@@ -1,100 +1,88 @@
-# ASR Validation via Advanced Hunting (TVM) and Registry Policy Evidence
+# ASR Validation via Advanced Hunting (TVM), Registry Policy Evidence, and Local Effective State (PowerShell)
 
-This document describes two KQL queries that help validate Attack Surface Reduction (ASR) rule posture on endpoints, and explains why results can differ from what you see in the Microsoft Defender portal ASR configuration UI.
+This document describes three validation methods for Attack Surface Reduction (ASR) posture on endpoints and explains why results can differ from what you see in the Microsoft Defender portal ASR configuration UI.
 
 ## Overview
 
-There are two different questions you may want to answer:
+There are three different questions you may want to answer:
 
-1. What is the effective ASR security state on the device (what is actually enforced)?
+1. What is the effective ASR state on the device (what Defender will enforce)?
 2. What ASR settings were deployed via policy (what was written/configured on the device)?
+3. What does the portal ASR configuration UI show (management-plane / applicability / policy-view)?
 
 These are related, but not always represented consistently in the GUI.
 
-This repo contains two queries:
-- Query 1: TVM-based ASR posture (effective security state)
+This repo contains:
+- Query 1: TVM-based ASR posture (cloud-reported secure configuration assessment)
 - Query 2: Registry-based ASR policy evidence (policy writes to device)
+- Script 1: PowerShell effective ASR state (local Defender engine resolved configuration)
 
 ---
 
-## Query 1: TVM ASR Posture (Effective Device Security State)
+## Query 1: TVM ASR Posture (Secure Configuration Assessment)
 
 ### Purpose
-This query uses `DeviceTvmSecureConfigurationAssessment` to report ASR-related security control status per device. It maps `ConfigurationId` values (SCIDs) to readable rule names and returns a per-device view of results.
+Uses `DeviceTvmSecureConfigurationAssessment` (optionally joined with `DeviceTvmSecureConfigurationAssessmentKB`) to report ASR-related secure configuration posture per device.
 
 ### What it answers
-- Is the rule applicable on this device?
+- Is the control applicable on this device?
 - Is the device compliant?
-- What context is reported (Block, Audit, Off, etc.)?
+- What assessment context is reported (Block, Audit, Off, etc.)?
 
 ### Why this matters
-`DeviceTvmSecureConfigurationAssessment` represents Defender’s assessment of the device security configuration. It is a strong indicator of effective posture, especially when you see:
-- `IsApplicable = 1`
-- `IsCompliant = 1`
-- `Context = ["Block"]` (or equivalent)
+This represents Defender Vulnerability Management (TVM) secure configuration assessment as reported through Defender XDR advanced hunting. It is a strong indicator of cloud-assessed posture when you see:
+- `IsApplicable = true`
+- `IsCompliant = true`
+- `Context` or equivalent indicates Block/Audit/Off
 
 ### Notes
-- This is a “security posture” view, not a “policy object” view.
-- It helps answer what is effectively enforced, regardless of how it was deployed.
+- This is a “secure configuration assessment” view, not a “policy object” view.
+- It helps answer what posture Defender reports regardless of how it was deployed.
 
 ---
 
 ## Query 2: Registry ASR Policy Evidence (Policy Manager ASRRules)
 
 ### Purpose
-This query parses registry writes to:
+Uses advanced hunting registry telemetry to find policy writes that set ASR rules. In many environments this is observed as changes under:
 
 `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows Defender\Policy Manager`
 
-Value name:
+Value name example:
 `ASRRules`
 
-This value contains a pipe-separated string with ASR GUIDs and states, for example:
-
+The data can contain pipe-separated entries similar to:
 `<GUID>=1|<GUID>=2|<GUID>=0`
 
 ### What it answers
-- Did a policy write ASR rules to the device via Policy Manager?
+- Did a policy write ASR rules to the device via policy channels?
 - Which ASR rule GUIDs are present?
 - What state is each rule configured to (Block, Audit, Disabled, Warn)?
-- Which process performed the write (for example `omadmclient.exe` typically indicates MDM/Intune/OMA-DM)?
+- Which process performed the write (example: `omadmclient.exe` often indicates MDM/Intune/OMA-DM activity)
 
 ### State mapping used
 - `0` = Disabled  
 - `1` = Block  
 - `2` = Audit  
-- `6` = Warn (supported on some rules/platforms)
+- `6` = Warn (platform and rule dependent)
 
 ### Why this matters
-Registry evidence is strong proof of configuration deployment on the endpoint. If the GUID exists in `ASRRules`, it was explicitly written as policy state.
+Registry evidence is strong proof of configuration deployment on the endpoint. If a GUID exists in the policy value, it was explicitly written as policy state.
 
 This is particularly useful when portal views appear inconsistent.
 
 ---
 
-## Why the GUI Can Differ (security.microsoft.com/asr → Configuration)
+## Script 1: PowerShell ASR Effective State (Local Defender Engine)
 
-The ASR Configuration view in the portal is not always a reliable reflection of effective device enforcement state. In practice, it often behaves more like a management-plane and policy-scope view.
+### Purpose
+Reads the Defender engine resolved ASR configuration from `Get-MpPreference` and maps:
+- GUID -> friendly rule name (local hashtable)
+- Action code -> mode (Block/Audit/Disabled/Warn)
 
-Common reasons for differences:
-- The GUI may show policy visibility within a specific configuration context, rather than runtime state.
-- Policy can be applied via different channels (MDM/Intune, Security Baselines, GPO, CSP, legacy profiles), and the GUI may not surface all sources consistently.
-- TVM and registry evidence can show a rule as active/enforced even when the GUI says “Not applicable”.
+### What it answers
+- What action does the Defender engine believe is configured for each ASR rule right now?
+- Which rules exist on the device that are not in your local mapping (shown as `Unknown / New Rule`)?
 
-Recommended interpretation:
-- Use TVM + registry to establish effective state and deployment evidence.
-- Treat GUI “Not applicable” as “not visible/managed in this specific policy view”, not as “not enforced on device”.
-
----
-
-## How to Keep These Queries Updated
-
-ASR evolves over time (new SCIDs, new rules). To update the TVM query list of SCIDs, run:
-
-```kql
-DeviceTvmSecureConfigurationAssessmentKB
-| where ConfigurationDescription contains "ASR"
-| distinct ConfigurationId
-```
-
-And for the GUID's please see: https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference#asr-rule-to-guid-matrix
+### Why this matters
+This is the closest “effective state” view you can get locally without needing a block event to occur. It reflects the engine-resolved configuration (after policy merge/conflict resolution).
