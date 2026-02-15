@@ -102,8 +102,8 @@ Because ASR state is represented in multiple planes, no single signal should be 
 
 **If you want to know what Defender is actually enforcing on the device**
 
-Trust: PowerShell (Get-MpPreference)
-Why: This reflects the Defender engine–resolved configuration after all policies, merges, conflicts, and defaults are applied. It is the closest available view to the real enforcement state without triggering an ASR event.
+- Trust: PowerShell (Get-MpPreference)
+- Why: This reflects the Defender engine–resolved configuration after all policies, merges, conflicts, and defaults are applied. It is the closest available view to the real enforcement state without triggering an ASR event.
 
 Caveats:
 - Does not show why a rule is set that way
@@ -111,8 +111,8 @@ Caveats:
 
 **If you want to know whether ASR was deployed via policy**
 
-Trust: Registry policy evidence (Policy Manager\\ASRRules)
-Why: Presence of ASR rule GUIDs in policy-backed registry locations is strong proof of configuration intent. It confirms that a management channel (MDM, GPO, etc.) explicitly wrote the setting to the device.
+- Trust: Registry policy evidence (Policy Manager\\ASRRules)
+- Why: Presence of ASR rule GUIDs in policy-backed registry locations is strong proof of configuration intent. It confirms that a management channel (MDM, GPO, etc.) explicitly wrote the setting to the device.
 
 Caveats:
 - Policy presence ≠ effective enforcement
@@ -120,8 +120,8 @@ Caveats:
 
 **If you want to know what Defender reports as security posture**
 
-Trust: TVM Secure Configuration Assessment
-Why: TVM reflects Defender’s cloud-assessed security posture, including applicability and compliance, independent of how the rule was deployed. This is the authoritative source for exposure scoring and Secure Score impact.
+- Trust: TVM Secure Configuration Assessment
+- Why: TVM reflects Defender’s cloud-assessed security posture, including applicability and compliance, independent of how the rule was deployed. This is the authoritative source for exposure scoring and Secure Score impact.
 
 Caveats:
 - Not real-time (assessment latency applies)
