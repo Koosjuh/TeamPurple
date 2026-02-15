@@ -141,3 +141,59 @@ Use all three together when troubleshooting discrepancies between policy, device
 
 ### Why this matters
 This is the closest “effective state” view you can get locally without needing a block event to occur. It reflects the engine-resolved configuration (after policy merge/conflict resolution).
+
+---
+
+## References (Microsoft)
+
+The following Microsoft documentation is directly relevant to the validation approaches described in this document and serves as authoritative reference material.
+
+### Attack Surface Reduction (ASR)
+
+- **Attack surface reduction rules reference**  
+  Official reference for all ASR rules, including rule names, GUIDs, supported platforms, and available modes (Block, Audit, Warn, Disabled).  
+  https://learn.microsoft.com/defender-endpoint/attack-surface-reduction-rules-reference
+
+- **Enable attack surface reduction rules**  
+  Describes supported configuration methods (Intune, Group Policy, PowerShell) and prerequisite requirements for ASR enforcement.  
+  https://learn.microsoft.com/defender-endpoint/enable-attack-surface-reduction
+
+---
+
+### Defender Vulnerability Management / TVM
+
+- **DeviceTvmSecureConfigurationAssessment table (Advanced Hunting)**  
+  Schema reference for TVM secure configuration assessment data, including `IsApplicable`, `IsCompliant`, and `Context`.  
+  https://learn.microsoft.com/defender-xdr/advanced-hunting-devicetvmsecureconfigurationassessment-table
+
+- **DeviceTvmSecureConfigurationAssessment (Azure Monitor reference)**  
+  Detailed column definitions and assessment semantics for TVM configuration posture reporting.  
+  https://learn.microsoft.com/azure/azure-monitor/reference/tables/devicetvmsecureconfigurationassessment
+
+---
+
+### Local Defender Engine (PowerShell)
+
+- **Get-MpPreference cmdlet reference**  
+  Documents how Microsoft Defender Antivirus exposes its effective configuration, including ASR rule IDs and actions.  
+  https://learn.microsoft.com/powershell/module/defender/get-mppreference
+
+---
+
+### Advanced Hunting & Schema
+
+- **Advanced hunting schema reference**  
+  Overview of Defender XDR advanced hunting tables and their intended use for security posture and investigation.  
+  https://learn.microsoft.com/defender-xdr/advanced-hunting-schema-tables
+
+---
+
+### Notes on scope
+
+These references intentionally focus on:
+
+- Authoritative Microsoft documentation  
+- Schema- and engine-level behavior, not portal UI presentation  
+- What is assessed, reported, or enforced, rather than how it is visualized  
+
+They are intended to support validation, troubleshooting, and auditability of ASR posture across cloud, policy, and endpoint layers.
