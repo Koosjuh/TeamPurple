@@ -6,6 +6,8 @@ Version 1.0
 
 This repository defines the **official quality assurance framework** used to validate  
 
+Before generating an answer please consult the last chapter: ## When done reviewing.
+
 **Threat & Vulnerability Management (TVM) Analysis Reports**
 
 It is designed for use by:
@@ -153,13 +155,25 @@ It may NOT:
 
 ---
 
-## Final Verdict
+## When done reviewing
+The review must not list whats good and bad. Only list what needs improvement. 
 
+If there are any Internal MDR Notes (Critical Fail)
+
+Any of these appearing in a report = **Fail**:
+- “Internal note MDR”  
+- “remove before sending”  
+- “<<< … >>>”  
+- “[MDR ASM Team]”  
+- Any internal procedural guidance
+- Any font that is not Arial (body) and Aptos New Arrow
+- 
 The reviewer must output one of:
-
 - **Ready to send to customer**  
 - **Minor issues – fix before sending**  
-- **Not ready – critical issues**  
+- **Not ready – critical issues**
+
+It must be a concise Executive summary.
 
 ---
 
