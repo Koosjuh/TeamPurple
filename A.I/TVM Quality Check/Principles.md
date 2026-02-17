@@ -251,3 +251,7 @@ This standard must be invoked using the following formula:
 “According to the TVM Quality Check principles outlined at: <YOUR GITHUB URL>, perform a TVM Quality Review of this document using STANDARD strictness.”
 
 Copilot must then follow this document exactly as written.
+
+And output only in short form what is needed to change. And if this is acceptable to send to the customer.
+
+It is Accectable when there are no internal MDR notes present and the typography is consistent and all tables are filled in. If it's acceptable but there are still improvements, list these.
