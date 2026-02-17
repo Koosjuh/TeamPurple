@@ -200,6 +200,7 @@ This case demonstrates that:
 - Detection and response includes exposure validation and hardening guidance, not only breach response.
 
 ## Triage 
+Below is the triage for this alert.
 
 ##### xx-test 
 - [Device Exposure]
@@ -239,10 +240,11 @@ This case demonstrates that:
   - IP reputation sources confirm malicious infrastructure.
 - Username spraying pattern observed (multiple common/admin-style accounts).
 - Behavior consistent with automated brute-force activity targeting exposed services.
-  
-  ---
-  
-  ### Triage Conclusion
+
+---
+
+### Triage Conclusion
+
 The device xx-test is directly exposed to the internet with TCP 3389 (Remote Desktop) accessible externally. Multiple external IP addresses with malicious reputation performed automated scanning and credential brute-force attempts. Inbound RDP TCP connections were accepted by the Windows Terminal Services process. All observed authentication attempts failed. Only LogonType = Network NTLM failures were recorded. 
 
 No RemoteInteractive logon attempts or successful authentications were identified. No evidence of interactive RDP session establishment or compromise was found. The activity is assessed as automated hostile scanning against an exposed RDP service with no impact to the system. During our upcoming bi-monthly Threat Vulnerability Management session, this configuration will be reviewed to assess:
