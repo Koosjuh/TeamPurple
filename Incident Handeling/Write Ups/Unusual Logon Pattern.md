@@ -33,7 +33,13 @@ DeviceLogonEvents
 | where DeviceName == "HOST" and RemoteIP == "IP"
 ```
 
-All observed authentication attempts resulted in: - ActionType = LogonFailed - FailureReason = InvalidUserNameOrPassword - LogonType = Network - Protocol = NTLM No successful logons were identified. 
+All observed authentication attempts resulted in: 
+- ActionType = LogonFailed
+- FailureReason = InvalidUserNameOrPassword
+- LogonType = Network
+- Protocol = NTLM
+
+No successful logons were identified. 
 
 No LogonType = RemoteInteractive events were observed for the investigated IPs. 
 
@@ -46,7 +52,9 @@ RDP accepted inbound connections on TCP/3389. Authentication telemetry for the s
 
 --- 
 
-## Service and Protocol Analysis To identify the targeted service, network telemetry was reviewed.
+## Service and Protocol Analysis 
+
+To identify the targeted service, network telemetry was reviewed.
 
 ```kql
 search "IP"
