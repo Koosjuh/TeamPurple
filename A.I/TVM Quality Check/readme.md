@@ -168,7 +168,7 @@ The reviewer must output one of:
 In any TVM report, run:
 
 > **“According to the TVM Quality Check principles outlined at:  
-> (https://github.com/Koosjuh/TeamPurple/tree/main/A.I/TVM%20Quality%20Check)
+> https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/A.I/TVM%20Quality%20Check/readme.md
 > please perform a complete TVM Quality Review of this document.”**
 
 Copilot will then strictly follow these principles.
