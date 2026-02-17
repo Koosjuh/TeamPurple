@@ -37,7 +37,7 @@ let PerDevice =
     ) on $left.OSPlatform_ == $right.OSPlatform
     | where OSVersion == "*" or OSVersion_ == OSVersion
     | extend
-        IsActive = Health_ =~ "Active",
+        IsActive = Health_ == "Active",
         IsHigh = tolower(Exposure_) == "high",
         IsMed  = tolower(Exposure_) == "medium",
         IsLow  = tolower(Exposure_) == "low",
@@ -48,12 +48,12 @@ let Agg =
     PerDevice
     | summarize
         ActiveTotal     = dcountif(DeviceId, IsActive),
-        ExposureHigh    = dcountif(DeviceId, IsHigh),
-        ExposureMedium  = dcountif(DeviceId, IsMed),
-        ExposureLow     = dcountif(DeviceId, IsLow),
-        ExposureNone    = dcountif(DeviceId, IsNone),
-        InternetFacing  = dcountif(DeviceId, IsInternet),
-        NotOnboarded    = dcountif(DeviceId, IsNotOnboarded)
+        ExposureHigh    = dcountif(DeviceId, IsActive and IsHigh),
+        ExposureMedium  = dcountif(DeviceId, IsActive and IsMed),
+        ExposureLow     = dcountif(DeviceId, IsActive and IsLow),
+        ExposureNone    = dcountif(DeviceId, IsActive and IsNone),
+        InternetFacing  = dcountif(DeviceId, IsActive and IsInternet),
+        NotOnboarded    = dcountif(DeviceId, IsActive and IsNotOnboarded)
       by OsRow;
 // MDE unsupported devices (match your validation query)
 let MdeUnsupportedRow =
