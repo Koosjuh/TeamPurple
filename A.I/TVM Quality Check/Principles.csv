@@ -41,3 +41,74 @@ Application Protect apps,Counts filled or scoped,Cloud Apps,No,Empty acceptable 
 Azure Protect overview,Modules listed or explicitly not in scope,Azure Security,Yes,Placeholder module text is blocking
 Azure Secure Score,Score filled or stated unavailable,Azure Security,No,Score optional if scoped
 Final review,All placeholders resolved,Overall quality,Yes,Remaining <…> placeholders are blocking
+Document header,Publish date and company name filled in,Metadata / Front page,Yes,[Publish Date] and [Company] are still placeholders
+Classification statement,Valid customer classification,Document governance,No,Uses template wording only
+Table of Contents,Page numbers correct and final,Structure,No,Appears auto-generated but not validated
+Sentinel connection warning,Validated against current Microsoft guidance,Microsoft Defender XDR Sentinel,No,Contains hard “DO NOT CONNECT” instruction which may be outdated
+security.txt action block,Internal instructions removed,Template hygiene,Yes,Explicit internal MDR instructions still present
+Secure Score screenshots,Customer screenshots inserted,Microsoft Secure Score,No,Multiple “REPLACE SCREENSHOT” markers present
+Entra ID recommended actions,Customer-specific comments added,Identity Protect – Cloud,No,Actions listed but comments column empty
+Conditional Access section,Actual CA policies listed,Entra ID Settings,Yes,CSV conversion instructions still present
+Conditional Access deprecation note,Validated against tenant usage,Entra ID Conditional Access,No,March 2026 note present but not confirmed applicable
+Entra Connect sync section,Screenshots and domain info filled,Hybrid identity,Yes,Contains REPLACE SCREENSHOT and placeholder domain/timestamp
+Seamless SSO block,Included only if applicable,Hybrid identity,No,Conditional inclusion instructions still present
+User settings tables,Actual tenant settings marked,Entra ID User Settings,Yes,Checkboxes not filled
+External collaboration settings,Actual configuration marked,Entra ID External Users,Yes,All options unchecked
+Admin consent workflow,Actual configuration documented,Entra ID Consent,No,Configuration table empty
+Previously consented apps,Actual counts and findings,Entra ID Applications,Yes,Uses placeholder counts (000)
+PIM alerts and roles,PIM data populated,Privileged Identity Management,Yes,Tables empty
+Cross-tenant access section,Actual partners listed or confirmed none,Cross-tenant access,Yes,Table empty
+Delegated admin partners,Actual GDAP relationships listed,Partner access,Yes,Table empty
+MDI Identity posture,Non-applicable internal notes removed,Identity Protect – On-Prem,Yes,Internal MDR notes still present
+MDI sensor status,Actual sensor data filled,Identity Protect – On-Prem,Yes,Tables empty
+MDI health state,Actual health warnings listed or confirmed none,Identity Protect – On-Prem,No,Placeholder issues listed
+Agent installation status,Actual agent coverage listed,Identity Protect – On-Prem,Yes,Tables empty
+KRBTGT reset section,Actual reset dates filled,Active Directory security,Yes,Placeholder domain and timestamp
+Device Protect advanced features,Actual tenant configuration marked,Device Protect,Yes,Checkboxes not filled
+Web content filtering policies,Actual policies listed or absence confirmed,Device Protect,No,Action text still generic
+Email notifications,Vulnerability and threat analytics notifications set,Device Protect,No,Current setting column empty
+Exposure distribution,Actual device counts filled,TVM,Yes,All counts empty
+Onboarding status,Actual number of non-onboarded devices,TVM,Yes,Placeholder NUMBER used
+Threat analytics section,Actual scores and actions filled,TVM,No,Screenshots and tables not populated
+NTLMv1 remediation block,Included only if applicable,Identity hardening,No,Conditional block still present
+Office Protect posture,Actual Secure Score actions listed,Office Protect,Yes,Tables empty
+Anti-spam/phishing/malware sections,Current vs recommended filled,Office Protect,Yes,All tables empty
+Basic authentication status,Validated and confirmed disabled,Exchange Online,No,KQL examples present but no conclusion
+SMTP AUTH deprecation note,Confirmed tenant readiness,Exchange Online,No,March–April 2026 note present
+DKIM rotation section,Actual rotation status listed,Email authentication,No,Example data present
+Inbound SMTP DANE section,Actual DNSSEC/DANE status validated,Email security,No,Tables empty
+TLSRPT section,Actual TLSRPT record validated,Email security,No,Placeholder values
+Legacy report buttons,Actual add-in presence confirmed,Office Protect,No,Found column empty
+Application Protect risk section,Actual app counts populated,Cloud Apps,Yes,Tables empty
+App governance status,Enabled/disabled confirmed,Cloud Apps,No,Uses placeholder text
+Azure Secure Score,Actual score populated,Azure security,Yes,Table empty
+Azure recommendations CSV,Converted and cleaned,Azure security,No,Conversion instructions still present
+Cover page layout,Consistent branding and spacing applied,Front page formatting,No,Header contains mixed font sizes and inline HTML span coloring
+Title formatting,Single clean title without inline HTML,Front page formatting,Yes,Title contains HTML <span> tags and inline color styling
+Image placeholders,All images replaced or removed,Document visuals,Yes,Multiple broken image placeholders present throughout the document
+Font consistency,Single body font used consistently (e.g. Arial Body),Global formatting,Yes,Mixed fonts and styles visible across tables and headings
+Heading hierarchy,Consistent Heading 1–3 usage,Document structure,No,Some headings appear bolded text instead of Word heading styles
+Table styling,Consistent table style applied,Tables,No,Tables vary in border style, spacing, and header emphasis
+Table header clarity,Clear and consistent header naming,Tables,No,Some headers contain instructional text instead of labels
+Checkbox symbols,Consistent checkbox representation,Tables,No,Mix of ☐ symbols and text-based Yes/No values
+Color usage,Minimal and consistent color palette,Visual design,No,Red/green/blue used inconsistently and sometimes without meaning
+Red text usage,Red reserved only for risk or blocking items,Visual cues,No,Red text used for placeholders and instructions
+Green text usage,Green reserved for positive state only,Visual cues,No,Green used decoratively in headings
+Instructional text,All internal instructions removed,Template hygiene,Yes,"REMOVE BEFORE SENDING", "<< >>", and internal notes still visible
+Inline comments,No inline editorial comments remain,Template hygiene,Yes,Several sections contain guidance meant for report authors
+Code block formatting,KQL queries clearly formatted as code blocks,Technical sections,No,Some KQL queries are inline and hard to read
+Link formatting,Consistent hyperlink style,Readability,No,Some links embedded in text blocks, others on separate lines
+Table spacing,Adequate spacing before and after tables,Layout,No,Some tables directly follow paragraphs without spacing
+Page breaks,Logical page breaks between chapters,Pagination,No,Large sections run together without clear page separation
+Footer/header consistency,Consistent footer and header text,Document chrome,No,Footer shows page numbers but inconsistent title usage
+Page numbering,Correct total page count and numbering,Pagination,No,Footer shows placeholder-style numbering (e.g. 4/30)
+HTML artifacts,No visible HTML tags or artifacts,Content cleanliness,Yes,<span> tags and escaped characters visible
+Screenshot captions,All screenshots labeled or removed,Visual clarity,No,Screenshots included without captions or explanation
+Empty tables,Empty tables removed or marked N/A,Readability,No,Large empty tables reduce readability
+Placeholder text,No placeholder text remains,Template hygiene,Yes,"<Company>", "<Publish Date>", "<score>", "000" still present
+Text alignment,Consistent left alignment for body text,Readability,No,Mixed alignment in tables and paragraphs
+Emphasis usage,Bold and underline used sparingly,Readability,No,Overuse of bold reduces emphasis effectiveness
+Section introductions,Each major section starts with a short intro,Readability,No,Some sections jump directly into tables
+Language consistency,Consistent tense and tone,Editorial quality,No,Mix of advisory tone and instructional tone
+Customer-facing wording,No internal team references,Professionalism,Yes,References to MDR colleagues and internal teams present
+Final polish pass,Document reads as finished customer report,Overall quality,Yes,Report still reads as a working template
