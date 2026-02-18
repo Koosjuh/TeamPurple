@@ -105,7 +105,7 @@ Page numbering,Correct total page count and numbering,Pagination,No,Footer shows
 HTML artifacts,No visible HTML tags or artifacts,Content cleanliness,Yes,<span> tags and escaped characters visible
 Screenshot captions,All screenshots labeled or removed,Visual clarity,No,Screenshots included without captions or explanation
 Empty tables,Empty tables removed or marked N/A,Readability,No,Large empty tables reduce readability
-Placeholder text,No placeholder text remains,Template hygiene,Yes,"<Company>", "<Publish Date>", "<score>", "000" still present
+Placeholder text,No placeholder text remains,Template hygiene,Yes,"""REMOVE BEFORE SENDING"", ""<< >>"", and internal notes still visible
 Text alignment,Consistent left alignment for body text,Readability,No,Mixed alignment in tables and paragraphs
 Emphasis usage,Bold and underline used sparingly,Readability,No,Overuse of bold reduces emphasis effectiveness
 Section introductions,Each major section starts with a short intro,Readability,No,Some sections jump directly into tables
