@@ -1,7 +1,7 @@
 Specific;Desired State;Context;Blocking;Comment
 The whole report;All required sections completed;TEMPLATE CONFORMANCE;No;Template is acceptable when required fields are filled
 Internal MDR references;Customer-safe wording used;Template hygiene;No;References like “written by an MDR colleague” and “we do not have access” are acceptable
-Sentinel workspace status;Workspace status explicitly filled in;Microsoft Defender XDR Sentinel;Conditional;If Status = Not Connected → OK, If Connected → add remark explaining why
+Sentinel workspace status;Workspace status explicitly filled in;Microsoft Defender XDR Sentinel;Conditional;If Status = Not Connected = OK, If Connected = add remark explaining why
 Sentinel connection statement;Status aligned with table value;Microsoft Defender XDR Sentinel;Conditional;“DO NOT CONNECT” text must align with actual status and remarks
 security.txt section;Customer domain and results filled;Vulnerability reporting;Conditional;If filled in → OK, If empty → Blocking
 security.txt internal block;Instruction block removed or resolved;Vulnerability reporting;Conditional;Only blocking if security.txt fields are not filled
