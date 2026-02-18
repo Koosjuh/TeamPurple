@@ -88,16 +88,16 @@ Title formatting;Single clean title without inline HTML;Front page formatting;Ye
 Image placeholders;All images replaced or removed;Document visuals;Yes;Multiple broken image placeholders present throughout the document
 Font consistency;Single body font used consistently (e.g. Arial Body);Global formatting;Yes;Mixed fonts and styles visible across tables and headings
 Heading hierarchy;Consistent Heading 1–3 usage;Document structure;No;Some headings appear bolded text instead of Word heading styles
-Table styling;Consistent table style;Tables;No;Tables vary in border style, spacing, and header emphasis
+Table styling;Consistent table style;Tables;No;Tables vary in border style spacing and header emphasis
 Table header clarity;Clear and consistent header naming;Tables;No;Some headers contain instructional text instead of labels
 Checkbox symbols;Consistent checkbox representation;Tables;No;Mix of ☐ symbols and text-based Yes/No values
 Color usage;Minimal and consistent color palette;Visual design;No;Red/green/blue used inconsistently and sometimes without meaning
 Red text usage;Red reserved only for risk or blocking items;Visual cues;No;Red text used for placeholders and instructions
 Green text usage;Green reserved for positive state only;Visual cues;No;Green used decoratively in headings
-Instructional text;All internal instructions removed;Template hygiene;Yes;REMOVE BEFORE SENDING, << >>, and internal notes still visible
+Instructional text;All internal instructions removed;Template hygiene;Yes;REMOVE BEFORE SENDING << >> and internal notes still visible
 Inline comments;No inline editorial comments remain;Template hygiene;Yes;Several sections contain guidance meant for report authors
 Code block formatting;KQL queries clearly formatted as code blocks;Technical sections;No;Some KQL queries are inline and hard to read
-Link formatting;Consistent hyperlink style;Readability;No;Some links embedded in text blocks, others on separate lines
+Link formatting;Consistent hyperlink style;Readability;No;Some links embedded in text blocks others on separate lines
 Table spacing;Adequate spacing before and after tables;Layout;No;Some tables directly follow paragraphs without spacing
 Page breaks;Logical page breaks between chapters;Pagination;No;Large sections run together without clear page separation
 Footer/header consistency;Consistent footer and header text;Document chrome;No;Footer shows page numbers but inconsistent title usage
@@ -105,7 +105,7 @@ Page numbering;Correct total page count and numbering;Pagination;No;Footer shows
 HTML artifacts;No visible HTML tags or artifacts;Content cleanliness;Yes;<span> tags and escaped characters visible
 Screenshot captions;All screenshots labeled or removed;Visual clarity;No;Screenshots included without captions or explanation
 Empty tables;Empty tables removed or marked N/A;Readability;No;Large empty tables reduce readability
-Placeholder text;No placeholder text remains;Template hygiene;Yes;REMOVE BEFORE SENDING, << >>, and internal notes still visible
+Placeholder text;No placeholder text remains;Template hygiene;Yes;REMOVE BEFORE SENDING << >> and internal notes still visible
 Text alignment;Consistent left alignment for body text;Readability;No;Mixed alignment in tables and paragraphs
 Emphasis usage;Bold and underline used sparingly;Readability;No;Overuse of bold reduces emphasis effectiveness
 Section introductions;Each major section starts with a short intro;Readability;No;Some sections jump directly into tables
