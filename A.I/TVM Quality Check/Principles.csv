@@ -88,7 +88,7 @@ Title formatting;Single clean title without inline HTML;Front page formatting;Ye
 Image placeholders;All images replaced or removed;Document visuals;Yes;Multiple broken image placeholders present throughout the document
 Font consistency;Single body font used consistently (e.g. Arial Body);Global formatting;Yes;Mixed fonts and styles visible across tables and headings
 Heading hierarchy;Consistent Heading 1–3 usage;Document structure;No;Some headings appear bolded text instead of Word heading styles
-Table styling;Consistent table style applied;Tables;No;Tables vary in border style, spacing, and header emphasis
+Table styling;Consistent table style;Tables;No;Tables vary in border style, spacing, and header emphasis
 Table header clarity;Clear and consistent header naming;Tables;No;Some headers contain instructional text instead of labels
 Checkbox symbols;Consistent checkbox representation;Tables;No;Mix of ☐ symbols and text-based Yes/No values
 Color usage;Minimal and consistent color palette;Visual design;No;Red/green/blue used inconsistently and sometimes without meaning
