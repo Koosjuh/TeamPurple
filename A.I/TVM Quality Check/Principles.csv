@@ -8,6 +8,7 @@ security.txt internal block,Instruction block removed or resolved,Vulnerability 
 Publish date,Actual publish date entered,Document metadata,Yes,[Publish Date] placeholder must be replaced
 Company name,Actual company name entered,Document metadata,Yes,[Company] placeholder must be replaced
 Version history,At least one finalized version entry,Document control,No,Version 0.1 acceptable when dated
+Introduction,In the Products table all products not marked ALL should have filled in Notes ,Document control,Yes,The products that are not marked are not monitored therefore it's important to note why it's not monitored or how many assets are not being monitored
 Reviewers section,At least one reviewer listed,Document governance,No,Reviewer name optional but recommended
 Distribution list,Stakeholders listed or marked N/A,Document governance,No,Empty table acceptable if agreed
 Secure Score section,Actual Secure Score values populated,Microsoft Secure Score,Yes,Empty Secure Score tables are blocking
