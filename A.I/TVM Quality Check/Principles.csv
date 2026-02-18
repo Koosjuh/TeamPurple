@@ -94,7 +94,7 @@ Checkbox symbols;Consistent checkbox representation;Tables;No;Mix of ☐ symbols
 Color usage;Minimal and consistent color palette;Visual design;No;Red/green/blue used inconsistently and sometimes without meaning
 Red text usage;Red reserved only for risk or blocking items;Visual cues;No;Red text used for placeholders and instructions
 Green text usage;Green reserved for positive state only;Visual cues;No;Green used decoratively in headings
-Instructional text;All internal instructions removed;Template hygiene;Yes;"REMOVE BEFORE SENDING", "<< >>", and internal notes still visible
+Instructional text;All internal instructions removed;Template hygiene;Yes;REMOVE BEFORE SENDING, << >>, and internal notes still visible
 Inline comments;No inline editorial comments remain;Template hygiene;Yes;Several sections contain guidance meant for report authors
 Code block formatting;KQL queries clearly formatted as code blocks;Technical sections;No;Some KQL queries are inline and hard to read
 Link formatting;Consistent hyperlink style;Readability;No;Some links embedded in text blocks, others on separate lines
