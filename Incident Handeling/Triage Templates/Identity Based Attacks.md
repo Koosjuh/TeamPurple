@@ -2,8 +2,9 @@
 
 ### Entra ID
 ```text
-User
-##### 
+**User**
+#####
+UPN:
 - [AuditLogs] 
 - [InteractiveLogs]
 - [Non interactive Logs]
@@ -12,7 +13,8 @@ User
 - [Office Activity]
 
 Location
-##### 
+#####
+**Location Details:**
 - [IP interactive]
 - [IP MFA]
 - [IP Non interactive]
@@ -21,8 +23,9 @@ Location
 ### On-Premis
 
 ```text
-User
-##### 
+**User**
+#####
+User:
 - [IdentityInfo]
 - [On Premis Account Changes]
 - [OnPremis Logon]
