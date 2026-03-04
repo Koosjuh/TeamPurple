@@ -1,4 +1,5 @@
 ```text
--[DNS]
+#####
+-[DNS Events]
 -[IP: IP]
 ```
