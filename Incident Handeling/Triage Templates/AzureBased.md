@@ -4,9 +4,9 @@
 **Service Principle / Managed Identity**
 #####
 Name:
-- [KeyVaultHistory]
 - [AzureActivity]
 - [AzureDiagnostics]
+- [SPN/Managed Identity Sign in]
 - [Graph IP based]
 - [Graph User Based]
 - []
