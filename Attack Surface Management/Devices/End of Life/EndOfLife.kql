@@ -1,106 +1,81 @@
-let Lookback = 30d;
-let Today = now();
-let EolSoonDays = 180;
-let OsMap =
-    externaldata(Sort:int, OsRow:string, OSPlatform:string, OSVersion:string, EOS:datetime, Notes:string, RowType:string)
-    ["https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/Attack%20Surface%20Management/Devices/End%20of%20Life/os-eol-map.csv"]
-    with(format="csv", ignoreFirstRecord=true);
-// Collapse to one row per report label (Windows 7/8/8.1 becomes 1 row)
-let OsRows =
-    OsMap
-    | where RowType !~ "MDE_UNSUPPORTED"
-    | summarize
-        Sort = min(Sort),
-        EOS  = min(EOS),
-        Notes = tostring(take_any(Notes))
-      by OsRow;
-let BaseDevices =
+```KQL
+let RawCsvUrl = "https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/Attack%20Surface%20Management/Devices/End%20of%20Life/os-eol-map.csv";
+let Ref =
+    externaldata(Release:string, Released:string, ActiveSupport:string, SecuritySupport:string, ExtendedSecurityUpdates:string, Latest:string)
+    [RawCsvUrl]
+    with (format="csv", ignoreFirstRecord=true)
+    | extend EndOfLifeDate = todatetime(SecuritySupport)
+    | extend RefType = iff(Release startswith "Windows Server", "Server", "Client")
+    | project OSName = Release, BaseBuild = tostring(Latest), EndOfLifeDate, RefType;
+
+let LatestDeviceInfo =
     DeviceInfo
-    | where Timestamp > ago(Lookback)
-    | summarize arg_max(Timestamp, *) by DeviceId
-    | extend
-        OSPlatform_ = tostring(OSPlatform),
-        OSVersion_  = tostring(OSVersion),
-        Health_     = tostring(column_ifexists("SensorHealthState", column_ifexists("HealthStatus", ""))),
-        Exposure_   = tostring(column_ifexists("ExposureLevel", "")),
-        Internet_   = tostring(column_ifexists("IsInternetFacing", "")),
-        Onboarding_ = tostring(column_ifexists("OnboardingStatus", "")),
-        DeviceCategory_ = tostring(column_ifexists("DeviceCategory", ""))  // used for MDE unsupported endpoints
-    | project DeviceId, OSPlatform_, OSVersion_, Health_, Exposure_, Internet_, Onboarding_, DeviceCategory_;
-// OS rows aggregation
-let PerDevice =
-    BaseDevices
-    | join kind=inner (
-        OsMap
-        | where RowType !~ "MDE_UNSUPPORTED"
-        | project OsRow, OSPlatform, OSVersion
-    ) on $left.OSPlatform_ == $right.OSPlatform
-    | where OSVersion == "*" or OSVersion_ == OSVersion
-    | extend
-        IsActive = Health_ == "Active",
-        IsHigh = tolower(Exposure_) == "high",
-        IsMed  = tolower(Exposure_) == "medium",
-        IsLow  = tolower(Exposure_) == "low",
-        IsNone = isempty(Exposure_) or tolower(Exposure_) == "none",
-        IsInternet = tolower(Internet_) in ("true","1","yes"),
-        IsNotOnboarded = Onboarding_ =~ "Can be onboarded";
-let Agg =
-    PerDevice
-    | summarize
-        ActiveTotal     = dcountif(DeviceId, IsActive),
-        ExposureHigh    = dcountif(DeviceId, IsActive and IsHigh),
-        ExposureMedium  = dcountif(DeviceId, IsActive and IsMed),
-        ExposureLow     = dcountif(DeviceId, IsActive and IsLow),
-        ExposureNone    = dcountif(DeviceId, IsActive and IsNone),
-        InternetFacing  = dcountif(DeviceId, IsActive and IsInternet),
-        NotOnboarded    = dcountif(DeviceId, IsActive and IsNotOnboarded)
-      by OsRow;
-// MDE unsupported devices (match your validation query)
-let MdeUnsupportedRow =
-    BaseDevices
-    | where Onboarding_ == "Unsupported"
-    | where DeviceCategory_ == "Endpoint"
-    | summarize
-        Sort = 90,
-        OSVersion = "MDE unsupported devices",
-        SupportStatus = "Not applicable",
-        EOS = datetime(null),
-        ActiveTotal = dcount(DeviceId),
-        ExposureBreakdown = "Not applicable",
-        InternetFacing = dcountif(DeviceId, tolower(Internet_) in ("true","1","yes")),
-        NotOnboarded = 0,
-        Notes = "OnboardingStatus=Unsupported AND DeviceCategory=Endpoint";
-(
-    OsRows
-    | join kind=leftouter Agg on OsRow
-    | extend
-        ActiveTotal = coalesce(ActiveTotal, 0),
-        ExposureHigh = coalesce(ExposureHigh, 0),
-        ExposureMedium = coalesce(ExposureMedium, 0),
-        ExposureLow = coalesce(ExposureLow, 0),
-        ExposureNone = coalesce(ExposureNone, 0),
-        InternetFacing = coalesce(InternetFacing, 0),
-        NotOnboarded = coalesce(NotOnboarded, 0),
-        ExposureBreakdown = strcat(
-            "High: ", ExposureHigh,
-            ", Medium: ", ExposureMedium,
-            ", Low: ", ExposureLow,
-            ", None: ", ExposureNone
-        ),
-        SupportStatus = case(
-            EOS < Today, "Out of support",
-            EOS < (Today + EolSoonDays*1d), "EOL soon",
-            "Supported"
+    | where OSPlatform startswith "Windows"
+    | where isnotempty(DeviceId)
+    | summarize arg_max(Timestamp, OSPlatform, OSVersion, OSBuild, ClientVersion, OnboardingStatus) by DeviceId
+    | extend DeviceInfoOSPlatform = tostring(OSPlatform)
+    | extend OSVersion = tostring(OSVersion)
+    | extend OSBuild = tostring(OSBuild)
+    | extend ClientVersion = tostring(ClientVersion)
+    | extend OnboardingStatus = tostring(OnboardingStatus)
+    | where isnotempty(OSBuild) and isnotempty(OSVersion)
+    | extend BaseBuild = strcat(OSVersion, ".", OSBuild)
+    | extend Revision = tostring(split(ClientVersion, ".")[3])
+    | extend FullBuild = iff(isempty(Revision), BaseBuild, strcat(BaseBuild, ".", Revision))
+    | extend DeviceType = iff(DeviceInfoOSPlatform startswith "WindowsServer", "Server", "Client")
+    | extend OnboardingBucket =
+        case(
+            OnboardingStatus =~ "Onboarded", "Onboarded",
+            OnboardingStatus in~ ("Can be onboarded", "Unsupported", "Insufficient info", "Misconfigured", "Not onboarded"), "NotOnboarded",
+            isempty(OnboardingStatus), "OtherOrUnknown",
+            "OtherOrUnknown"
         )
-    | project
-        Sort,
-        OSVersion = OsRow,
-        SupportStatus,
-        EOS,
-        ActiveTotal,
-        ExposureBreakdown,
-        InternetFacing,
-        NotOnboarded,
-        Notes
-)
-| union (MdeUnsupportedRow | project Sort, OSVersion, SupportStatus, EOS, ActiveTotal, ExposureBreakdown, InternetFacing, NotOnboarded, Notes)
+    | project DeviceId, DeviceInfoOSPlatform, DeviceType, BaseBuild, FullBuild, OnboardingStatus, OnboardingBucket;
+
+LatestDeviceInfo
+| join kind=leftouter Ref on BaseBuild
+| where RefType == DeviceType
+| extend SupportState =
+    case(
+        isnull(EndOfLifeDate), "Unknown (no CSV match)",
+        EndOfLifeDate < now(), "OutOfSupport",
+        EndOfLifeDate <= datetime_add("year", 1, now()), "EndingWithin1Year",
+        "Supported"
+    )
+| where SupportState in ("OutOfSupport", "EndingWithin1Year")
+| summarize
+    TotalDevices = dcount(DeviceId),
+    NotOnboarded = dcountif(DeviceId, OnboardingBucket == "NotOnboarded"),
+    Onboarded = dcountif(DeviceId, OnboardingBucket == "Onboarded"),
+    OtherOrUnknown = dcountif(DeviceId, OnboardingBucket == "OtherOrUnknown"),
+    RawOnboardingStates = strcat_array(make_set(OnboardingStatus), ", "),
+    DeviceInfoOSPlatforms = strcat_array(make_set(DeviceInfoOSPlatform), ", "),
+    VersionDistribution =
+        strcat_array(
+            make_set(
+                strcat(
+                    FullBuild,
+                    " (EoS: ",
+                    format_datetime(EndOfLifeDate, "yyyy-MM-dd"),
+                    ")"
+                )
+            ),
+            "; "
+        )
+by OSName, Version=BaseBuild, SupportState, EndOfLifeDate
+| extend CountCheck = TotalDevices - (NotOnboarded + Onboarded + OtherOrUnknown)
+| project
+    OSName,
+    Version,
+    SupportState,
+    EndOfLifeDate = format_datetime(EndOfLifeDate, "yyyy-MM-dd"),
+    TotalDevices,
+    NotOnboarded,
+    Onboarded,
+    OtherOrUnknown,
+    CountCheck,
+    DeviceInfoOSPlatforms,
+    RawOnboardingStates,
+    VersionDistribution
+| order by SupportState asc, EndOfLifeDate asc, TotalDevices desc
+```
