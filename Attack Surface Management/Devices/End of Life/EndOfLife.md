@@ -1,3 +1,5 @@
+End of Life KQL for Advanced hunting
+
 ```KQL
 let RawCsvUrl = "https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/Attack%20Surface%20Management/Devices/End%20of%20Life/os-eol-map.csv";
 let Ref =
@@ -7,7 +9,6 @@ let Ref =
     | extend EndOfLifeDate = todatetime(SecuritySupport)
     | extend RefType = iff(Release startswith "Windows Server", "Server", "Client")
     | project OSName = Release, BaseBuild = tostring(Latest), EndOfLifeDate, RefType;
-
 let LatestDeviceInfo =
     DeviceInfo
     | where OSPlatform startswith "Windows"
@@ -31,7 +32,6 @@ let LatestDeviceInfo =
             "OtherOrUnknown"
         )
     | project DeviceId, DeviceInfoOSPlatform, DeviceType, BaseBuild, FullBuild, OnboardingStatus, OnboardingBucket;
-
 LatestDeviceInfo
 | join kind=leftouter Ref on BaseBuild
 | where RefType == DeviceType
