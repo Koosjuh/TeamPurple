@@ -13,3 +13,11 @@
     - [DeviceEvents
   - [VirusTotal]
 ```
+
+```KQL
+union isfuzzy=true DeviceProcessEvents, DeviceEvents, DeviceFileEvents
+| where FileName has "FILE" and DeviceName has "HOST"
+
+union isfuzzy=true DeviceProcessEvents, DeviceEvents, DeviceFileEvents
+| where SHA256 == "SHA256"
+```
