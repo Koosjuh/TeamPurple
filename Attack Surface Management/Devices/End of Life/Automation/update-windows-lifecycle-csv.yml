@@ -1,0 +1,47 @@
+name: Update Windows lifecycle CSV
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+
+      - name: Generate CSV
+        run: |
+          python update_windows_lifecycle_csv.py
+
+      - name: Create pull request if changed
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: automation/update-windows-lifecycle-csv
+          commit-message: "Update Windows lifecycle CSV"
+          title: "Update Windows lifecycle CSV"
+          body: |
+            Automated refresh of Windows client and server lifecycle data from Microsoft Learn release health pages.
+
+            Sources:
+            - Windows 10 release information
+            - Windows 11 release information
+            - Windows Server release information
+          delete-branch: true
