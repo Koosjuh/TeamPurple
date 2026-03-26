@@ -1,6 +1,6 @@
-# Security Updates Exposure — Microsoft Defender Vulnerability Management
+# Security Updates Exposure
 
-This query identifies devices that are missing monthly Microsoft Security Updates and groups them by update release.
+These queries identify devices that are missing monthly Microsoft Security Updates and groups them by update release.
 It provides a quick overview of patch posture and highlights which security update cycle has the highest exposure.
 
 The results are sorted from most recent → older to prioritize current patch gaps.
