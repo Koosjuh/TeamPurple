@@ -22,12 +22,13 @@ by ["Missing KB"] = RecommendedSecurityUpdate, SortDate
 | project-away SortDate
 ```
 
-**Example Output**
+### Example Output
 
-| Exposed Devices   |  Missing KB |
-| 100                | Security Updates March 2026 |
-| 20                 | Security Updates February 2026 |
-| 1                 | Security Updates October 2025 |
+| Exposed Devices | Missing KB                     |
+|-----------------|--------------------------------|
+| 100             | Security Updates March 2026    |
+| 20              | Security Updates February 2026 |
+| 1               | Security Updates October 2025  |
 
 ## Device Drill-down Query
 
@@ -47,6 +48,14 @@ by ["Missing KB"] = RecommendedSecurityUpdate, SortDate
 | sort by SortDate desc
 | project-away SortDate
 ```
+
+### Example Output — Device Drill-down
+
+| Exposed Devices | Missing KB                  | Devices                         | DeviceIds                    |
+|-----------------|-----------------------------|----------------------------------|------------------------------|
+| 100 | Security Updates March 2026 | ["PC-01","PC-02","PC-03"] | ["id1","id2","id3"] |
+| 20  | Security Updates February 2026 | ["SRV-01","SRV-02"] | ["id4","id5"] |
+| 1   | Security Updates October 2025 | ["LEGACY-01"] | ["id6"] |
 
 Data Source
 
