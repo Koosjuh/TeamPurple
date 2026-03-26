@@ -5,7 +5,7 @@ It provides a quick overview of patch posture and highlights which security upda
 
 The results are sorted from most recent → older to prioritize current patch gaps.
 
-## Overview Query Exposure by Security Update
+## Overview Exposure by Security Update
 
 **Shows how many devices are missing each monthly security update.**
 
@@ -29,6 +29,29 @@ by ["Missing KB"] = RecommendedSecurityUpdate, SortDate
 | 100             | Security Updates March 2026    |
 | 20              | Security Updates February 2026 |
 | 1               | Security Updates October 2025  |
+
+## Overview Exposure by Security Update - Per RecommendedSecurityUpdateId
+
+**Shows how many devices are missing each monthly security update. Per RecommendedSecurityUpdateId**
+
+For example March 2026 Updates have Regular patches for Windows 11, Windows Server 2022 and Hotfixes. The query below shows the ratio per unique update id.
+
+```kql
+DeviceTvmSoftwareVulnerabilities
+| where isnotempty(RecommendedSecurityUpdate)
+| summarize
+    ["Exposed Devices"] = dcount(DeviceId)
+by ["Missing KB"] = RecommendedSecurityUpdate, RecommendedSecurityUpdateId
+| sort by RecommendedSecurityUpdateId desc
+```
+
+### Example Output
+
+| Exposed Devices | RecommendedSecurityUpdateId    | Missing KB                     |
+|-----------------|--------------------------------|--------------------------------|
+| 100             | 5079473                        | Security Updates March 2026    |
+| 20              | 5079766                        | Security Updates February 2026 |
+| 1               | 5077472                        | Security Updates October 2025  |
 
 ## Device Drill-down Query
 
