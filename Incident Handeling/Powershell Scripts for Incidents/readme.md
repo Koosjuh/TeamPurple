@@ -319,7 +319,7 @@ Get-ScamSpurTriage -IPs "1.1.1.1"
 ### Multiple IPs
 
 ```powershell
-Get-ScamSpurTriage -IPs "1.1.1.1","194.35.123.141"
+Get-ScamSpurTriage -IPs "1.1.1.1","8.8.8.8"
 ```
 
 ### Verbose logging
