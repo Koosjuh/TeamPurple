@@ -54,17 +54,20 @@ Register-SecretVault -Name SecretVault -ModuleName Microsoft.PowerShell.SecretSt
 
 ## SecretStore configuration
 
+```powershell
 Set-SecretStoreConfiguration `
     -Authentication Password `
     -PasswordTimeout 14400 `
     -Interaction Prompt
+```
 
 This means:
 
-Vault locked by default
-Unlock required once per session
-Auto-lock after 4 hours
-No password stored anywhere
+- Vault locked by default
+- Can only be unlocked by password in current user session
+- Unlock required once per session
+- Auto-lock after 4 hours
+- No password stored anywhere
 
 ## Store the API secrets in the vault
 
