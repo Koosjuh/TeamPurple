@@ -7,6 +7,9 @@ function Get-ScamSpurTriage {
         [Parameter(Mandatory = $true)]
         [string]$ApiKey,
 
+        [Parameter(Mandatory = $true)]
+        [string]$ProxyCheckApiKey,
+
         [Parameter(Mandatory = $false)]
         [string[]]$IPs,
 
@@ -26,10 +29,11 @@ function Get-ScamSpurTriage {
         $risk = "Unknown"
         $proxyTorDc = "Unknown / Unknown / Unknown"
         $provider = "Unknown"
-        $spur = "Not checked"
+        $proxyCheckVpnProxy = "Unknown / Unknown"
+        $firstSeen = "Unknown"
 
         try {
-            $scamUrl = "$BaseUrl/$ApiUser/?key=$ApiKey&ip=$ip"
+            $scamUrl = "${BaseUrl}/${ApiUser}/?key=${ApiKey}&ip=${ip}"
             Write-Verbose "Requesting Scamalytics for $ip"
             $resp = Invoke-RestMethod -Uri $scamUrl -Method Get -ErrorAction Stop
 
@@ -38,7 +42,7 @@ function Get-ScamSpurTriage {
 
             if ($scam.status -eq "ok") {
                 $score = if ($null -ne $scam.scamalytics_score) { $scam.scamalytics_score } else { "Unknown" }
-                $risk  = if ($scam.scamalytics_risk) { $scam.scamalytics_risk } else { "Unknown" }
+                $risk  = if (-not [string]::IsNullOrWhiteSpace($scam.scamalytics_risk)) { $scam.scamalytics_risk } else { "Unknown" }
 
                 $vpn = if ($null -ne $scam.scamalytics_proxy.is_vpn) { $scam.scamalytics_proxy.is_vpn } else { "Unknown" }
                 $dc  = if ($null -ne $scam.scamalytics_proxy.is_datacenter) { $scam.scamalytics_proxy.is_datacenter } else { "Unknown" }
@@ -47,29 +51,25 @@ function Get-ScamSpurTriage {
 
                 $mm   = $ext.maxmind_geolite2
                 $dbip = $ext.dbip
-                $ip2l = $ext.ip2proxy_lite
-                $ip2  = $ext.ip2proxy
 
                 $city = $null
                 $country = $null
 
                 if ($mm) {
-                    if (-not [string]::IsNullOrWhiteSpace($mm.ip_city)) { $city = $mm.ip_city }
-                    if (-not [string]::IsNullOrWhiteSpace($mm.ip_country_name)) { $country = $mm.ip_country_name }
+                    if (-not [string]::IsNullOrWhiteSpace($mm.ip_city)) {
+                        $city = $mm.ip_city
+                    }
+                    if (-not [string]::IsNullOrWhiteSpace($mm.ip_country_name)) {
+                        $country = $mm.ip_country_name
+                    }
                 }
 
                 if ([string]::IsNullOrWhiteSpace($city) -and $dbip -and -not [string]::IsNullOrWhiteSpace($dbip.ip_city)) {
                     $city = $dbip.ip_city
                 }
+
                 if ([string]::IsNullOrWhiteSpace($country) -and $dbip -and -not [string]::IsNullOrWhiteSpace($dbip.ip_country_name)) {
                     $country = $dbip.ip_country_name
-                }
-
-                if ([string]::IsNullOrWhiteSpace($city) -and $ip2l -and -not [string]::IsNullOrWhiteSpace($ip2l.ip_city)) {
-                    $city = $ip2l.ip_city
-                }
-                if ([string]::IsNullOrWhiteSpace($country) -and $ip2l -and -not [string]::IsNullOrWhiteSpace($ip2l.ip_country_name)) {
-                    $country = $ip2l.ip_country_name
                 }
 
                 if (-not [string]::IsNullOrWhiteSpace($city) -and -not [string]::IsNullOrWhiteSpace($country)) {
@@ -82,18 +82,11 @@ function Get-ScamSpurTriage {
                 if ($dbip -and -not [string]::IsNullOrWhiteSpace($dbip.isp_name)) {
                     $isp = $dbip.isp_name
                 }
-                elseif ($scam -and -not [string]::IsNullOrWhiteSpace($scam.scamalytics_isp)) {
+                elseif (-not [string]::IsNullOrWhiteSpace($scam.scamalytics_isp)) {
                     $isp = $scam.scamalytics_isp
                 }
                 elseif ($mm -and -not [string]::IsNullOrWhiteSpace($mm.as_name)) {
                     $isp = $mm.as_name
-                }
-
-                if ($ip2l -and -not [string]::IsNullOrWhiteSpace($ip2l.ip_provider)) {
-                    $provider = $ip2l.ip_provider
-                }
-                elseif ($ip2 -and -not [string]::IsNullOrWhiteSpace($ip2.proxy_type)) {
-                    $provider = $ip2.proxy_type
                 }
             }
             else {
@@ -106,18 +99,65 @@ function Get-ScamSpurTriage {
         }
 
         try {
-            $spurResp = Invoke-WebRequest -Uri "https://spur.us/context/$ip" -UseBasicParsing -ErrorAction Stop
-            $html = [string]$spurResp.Content
+            $pcUrl = "https://proxycheck.io/v3/${ip}?key=${ProxyCheckApiKey}&vpn=1&asn=1"
+            Write-Verbose "Requesting ProxyCheck for $ip"
 
-            if ($html -match 'captcha\?redirect=' -or $html -match 'Testing your connection') {
-                $spur = "Blocked by captcha/interstitial"
+            $pcRaw = Invoke-WebRequest -Uri $pcUrl -UseBasicParsing -ErrorAction Stop
+            $pcResp = $pcRaw.Content | ConvertFrom-Json
+
+            if ($pcResp.status -in @("ok", "warning")) {
+                $pcProperty = $pcResp.PSObject.Properties | Where-Object { $_.Name -eq $ip }
+
+                if ($null -ne $pcProperty) {
+                    $pcData = $pcProperty.Value
+
+                    if ($null -ne $pcData.detections) {
+                        $pcVpn   = if ($null -ne $pcData.detections.vpn) { $pcData.detections.vpn } else { "Unknown" }
+                        $pcProxy = if ($null -ne $pcData.detections.proxy) { $pcData.detections.proxy } else { "Unknown" }
+                        $proxyCheckVpnProxy = "$pcVpn / $pcProxy"
+
+                        if (-not [string]::IsNullOrWhiteSpace([string]$pcData.detections.first_seen)) {
+                            $firstSeen = [string]$pcData.detections.first_seen
+                        }
+                    }
+
+                    $mainOperator = $null
+                    $additionalOperators = @()
+
+                    if ($null -ne $pcData.operator) {
+                        if (-not [string]::IsNullOrWhiteSpace([string]$pcData.operator.name)) {
+                            $mainOperator = [string]$pcData.operator.name
+                        }
+
+                        if ($null -ne $pcData.operator.additional_operators) {
+                            if ($pcData.operator.additional_operators -is [System.Array]) {
+                                $additionalOperators = $pcData.operator.additional_operators | Where-Object {
+                                    -not [string]::IsNullOrWhiteSpace([string]$_)
+                                }
+                            }
+                            elseif (-not [string]::IsNullOrWhiteSpace([string]$pcData.operator.additional_operators)) {
+                                $additionalOperators = @([string]$pcData.operator.additional_operators)
+                            }
+                        }
+                    }
+
+                    if (-not [string]::IsNullOrWhiteSpace($mainOperator) -and $additionalOperators.Count -gt 0) {
+                        $provider = "$mainOperator, with additional overlap noted for $($additionalOperators -join ', ')"
+                    }
+                    elseif (-not [string]::IsNullOrWhiteSpace($mainOperator)) {
+                        $provider = $mainOperator
+                    }
+                }
+                else {
+                    Write-Verbose "ProxyCheck returned status ok, but no IP result block was found for $ip"
+                }
             }
             else {
-                $spur = "Real page returned"
+                Write-Verbose "ProxyCheck status was $($pcResp.status)"
             }
         }
         catch {
-            $spur = "Lookup failed"
+            Write-Verbose "ProxyCheck failed for $ip. $($_.Exception.Message)"
         }
 
         Write-Output "##### $ip"
@@ -126,9 +166,14 @@ function Get-ScamSpurTriage {
         Write-Output "- Risk score: $score ($risk)"
         Write-Output "- Proxy/TOR/Datacenter: $proxyTorDc"
         Write-Output "- Provider: $provider"
-        Write-Output "- SPUR: $spur"
+        Write-Output "- ProxyCheck VPN/Proxy: $proxyCheckVpnProxy"
+        Write-Output "- First seen: $firstSeen"
         Write-Output ""
     }
 }
 
-Get-ScamSpurTriage -ApiUser "" -ApiKey "" -IPs ""
+Get-ScamSpurTriage `
+    -ApiUser "YOUR_SCAMALYTICS_USER" `
+    -ApiKey "YOUR_SCAMALYTICS_KEY" `
+    -ProxyCheckApiKey "YOUR_PROXYCHECK_KEY" `
+    -IPs "IP_HERE"
