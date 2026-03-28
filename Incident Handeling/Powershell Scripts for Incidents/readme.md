@@ -15,9 +15,9 @@ This setup assumes:
 
 - Vault name is **`SecretVault`**
 - The vault uses **Password** authentication
-- The vault is unlocked **automatically inside the triage script**
-- The unlock password is stored locally in a **DPAPI-protected CLIXML file**
-- Timeout is **9 hours** per shift
+- The vault needs to be unlocked by the SecretVault password once every 4 hours
+- Safe Password for SecretVault in a **Password Manager**
+- Timeout is **4 hours** per shift
 
 This means the vault is:
 
@@ -53,40 +53,17 @@ Register-SecretVault -Name SecretVault -ModuleName Microsoft.PowerShell.SecretSt
 
 ## SecretStore configuration
 
-Configure the store for:
+Set-SecretStoreConfiguration `
+    -Authentication Password `
+    -PasswordTimeout 14400 `
+    -Interaction Prompt
 
-- password authentication
-- no interactive prompts during script execution
-- 9 hour unlock timeout
+This means:
 
-```powershell
-$password = Import-CliXml -Path $securePasswordPath
-
-$storeConfiguration = @{
-    Authentication = 'Password'
-    PasswordTimeout = 32400 ## Given how long a shift is. This can be cut down. Time is in seconds.
-    Interaction = 'None'
-    Password = $password
-    Confirm = $false
-}
-
-Set-SecretStoreConfiguration @storeConfiguration
-```
-
-## One-time setup for the DPAPI-protected password file
-
-Create the local encrypted password file once:
-
-```powershell
-$securePasswordPath = "$env:APPDATA\PowerShell\SecretStore\secretstore-password.xml"
-
-New-Item -ItemType Directory -Force -Path (Split-Path $securePasswordPath) | Out-Null
-
-$vaultPassword = Read-Host "Enter SecretStore vault password" -AsSecureString
-$vaultPassword | Export-Clixml -Path $securePasswordPath
-```
-
-This file is protected by **Windows DPAPI** and can only be decrypted by the same user on the same device.
+Vault locked by default
+Unlock required once per session
+Auto-lock after 4 hours
+No password stored anywhere
 
 ## Store the API secrets in the vault
 
@@ -121,23 +98,64 @@ function Get-ScamSpurTriage {
         [string]$ProxyCheckKeySecretName = "ProxyCheckKey",
 
         [Parameter(Mandatory = $false)]
-        [string]$SecretStorePasswordPath = "$env:APPDATA\PowerShell\SecretStore\secretstore-password.xml",
+        [int]$MaxRetries = 3,
 
         [Parameter(Mandatory = $false)]
-        [int]$VaultUnlockTimeoutSeconds = 32400
+        [int]$InitialRetryDelaySeconds = 2
     )
+
+    function Invoke-WithRetry {
+        param(
+            [Parameter(Mandatory = $true)]
+            [scriptblock]$ScriptBlock,
+
+            [Parameter(Mandatory = $true)]
+            [string]$OperationName,
+
+            [Parameter(Mandatory = $false)]
+            [int]$Retries = 3,
+
+            [Parameter(Mandatory = $false)]
+            [int]$InitialDelaySeconds = 2
+        )
+
+        $attempt = 0
+        $delay = $InitialDelaySeconds
+
+        while ($attempt -lt $Retries) {
+            try {
+                return & $ScriptBlock
+            }
+            catch {
+                $attempt++
+
+                if ($attempt -ge $Retries) {
+                    throw
+                }
+
+                Write-Verbose "$OperationName failed on attempt $attempt. Retrying in $delay second(s)."
+                Start-Sleep -Seconds $delay
+                $delay = [Math]::Min($delay * 2, 30)
+            }
+        }
+    }
+
+    function Test-ValidIpAddress {
+        param(
+            [Parameter(Mandatory = $true)]
+            [string]$InputIp
+        )
+
+        $nullIp = $null
+        return [System.Net.IPAddress]::TryParse($InputIp, [ref]$nullIp)
+    }
 
     try {
         $null = Get-SecretVault -Name $VaultName -ErrorAction Stop
 
         $storeStatus = Get-SecretStoreConfiguration -ErrorAction Stop
         if ($storeStatus.Authentication -eq 'Password') {
-            if (-not (Test-Path -Path $SecretStorePasswordPath)) {
-                throw "SecretStore password file not found at: $SecretStorePasswordPath"
-            }
-
-            $vaultPassword = Import-Clixml -Path $SecretStorePasswordPath
-            Unlock-SecretStore -Password $vaultPassword -PasswordTimeout $VaultUnlockTimeoutSeconds -ErrorAction Stop
+            Write-Verbose "SecretStore uses password authentication. Unlock it first with Unlock-SecretStore."
         }
 
         $ApiUser = Get-Secret -Vault $VaultName -Name $ScamalyticsUserSecretName -AsPlainText -ErrorAction Stop
@@ -145,7 +163,7 @@ function Get-ScamSpurTriage {
         $ProxyCheckApiKey = Get-Secret -Vault $VaultName -Name $ProxyCheckKeySecretName -AsPlainText -ErrorAction Stop
     }
     catch {
-        throw "Failed to unlock vault or retrieve secrets. $($_.Exception.Message)"
+        throw "Failed to retrieve secrets from vault '$VaultName'. If the vault is password protected, run Unlock-SecretStore first. $($_.Exception.Message)"
     }
 
     if (-not $IPs -or $IPs.Count -eq 0) {
@@ -153,32 +171,70 @@ function Get-ScamSpurTriage {
         $IPs = $inputIPs -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ }
     }
 
-    foreach ($ip in $IPs) {
-        $location = "Unknown"
-        $isp = "Unknown"
-        $score = "Unknown"
-        $risk = "Unknown"
-        $proxyTorDc = "Unknown / Unknown / Unknown"
-        $provider = "Unknown"
-        $proxyCheckVpnProxy = "Unknown / Unknown"
-        $firstSeen = "Unknown"
+    foreach ($rawIp in $IPs) {
+        $ip = $rawIp.Trim()
+
+        if (-not (Test-ValidIpAddress -InputIp $ip)) {
+            Write-Warning "Skipping invalid IP: $ip"
+            continue
+        }
+
+        $location = $null
+        $isp = $null
+        $score = $null
+        $risk = $null
+        $proxyTorDc = $null
+        $provider = $null
+        $proxyCheckVpnProxy = $null
+        $firstSeen = $null
+
+        $isVpn = $false
+        $isTor = $false
+        $isDatacenter = $false
+        $isProxy = $false
+        $label = $null
 
         try {
             $scamUrl = "${BaseUrl}/${ApiUser}/?key=${ApiKey}&ip=${ip}"
             Write-Verbose "Requesting Scamalytics for $ip"
-            $resp = Invoke-RestMethod -Uri $scamUrl -Method Get -ErrorAction Stop
+
+            $resp = Invoke-WithRetry -OperationName "Scamalytics request for $ip" -Retries $MaxRetries -InitialDelaySeconds $InitialRetryDelaySeconds -ScriptBlock {
+                Invoke-RestMethod -Uri $scamUrl -Method Get -ErrorAction Stop
+            }
 
             $scam = $resp.scamalytics
             $ext  = $resp.external_datasources
 
             if ($scam.status -eq "ok") {
-                $score = if ($null -ne $scam.scamalytics_score) { $scam.scamalytics_score } else { "Unknown" }
-                $risk  = if (-not [string]::IsNullOrWhiteSpace($scam.scamalytics_risk)) { $scam.scamalytics_risk } else { "Unknown" }
+                if ($null -ne $scam.scamalytics_score) {
+                    $score = $scam.scamalytics_score
+                }
 
-                $vpn = if ($null -ne $scam.scamalytics_proxy.is_vpn) { $scam.scamalytics_proxy.is_vpn } else { "Unknown" }
-                $dc  = if ($null -ne $scam.scamalytics_proxy.is_datacenter) { $scam.scamalytics_proxy.is_datacenter } else { "Unknown" }
-                $tor = if ($null -ne $ext.x4bnet.is_tor) { $ext.x4bnet.is_tor } else { "Unknown" }
-                $proxyTorDc = "$vpn / $tor / $dc"
+                if (-not [string]::IsNullOrWhiteSpace($scam.scamalytics_risk)) {
+                    $risk = $scam.scamalytics_risk
+                }
+
+                if ($null -ne $scam.scamalytics_proxy.is_vpn) {
+                    $isVpn = [bool]$scam.scamalytics_proxy.is_vpn
+                }
+
+                if ($null -ne $scam.scamalytics_proxy.is_datacenter) {
+                    $isDatacenter = [bool]$scam.scamalytics_proxy.is_datacenter
+                }
+
+                if ($null -ne $ext.x4bnet.is_tor) {
+                    $isTor = [bool]$ext.x4bnet.is_tor
+                }
+
+                if ($null -ne $ext.firehol.is_proxy) {
+                    $isProxy = [bool]$ext.firehol.is_proxy
+                }
+
+                $proxyTorDc = "$isVpn / $isTor / $isDatacenter"
+
+                if ($isVpn -or $isTor -or $isDatacenter -or $isProxy) {
+                    $label = "VPN"
+                }
 
                 $mm   = $ext.maxmind_geolite2
                 $dbip = $ext.dbip
@@ -225,7 +281,6 @@ function Get-ScamSpurTriage {
             }
         }
         catch {
-            $risk = "Lookup failed"
             Write-Verbose "Scamalytics failed for $ip. $($_.Exception.Message)"
         }
 
@@ -233,7 +288,10 @@ function Get-ScamSpurTriage {
             $pcUrl = "https://proxycheck.io/v3/${ip}?key=${ProxyCheckApiKey}&vpn=1&asn=1"
             Write-Verbose "Requesting ProxyCheck for $ip"
 
-            $pcRaw = Invoke-WebRequest -Uri $pcUrl -UseBasicParsing -ErrorAction Stop
+            $pcRaw = Invoke-WithRetry -OperationName "ProxyCheck request for $ip" -Retries $MaxRetries -InitialDelaySeconds $InitialRetryDelaySeconds -ScriptBlock {
+                Invoke-WebRequest -Uri $pcUrl -UseBasicParsing -ErrorAction Stop
+            }
+
             $pcResp = $pcRaw.Content | ConvertFrom-Json
 
             if ($pcResp.status -in @("ok", "warning")) {
@@ -243,9 +301,12 @@ function Get-ScamSpurTriage {
                     $pcData = $pcProperty.Value
 
                     if ($null -ne $pcData.detections) {
-                        $pcVpn   = if ($null -ne $pcData.detections.vpn) { $pcData.detections.vpn } else { "Unknown" }
-                        $pcProxy = if ($null -ne $pcData.detections.proxy) { $pcData.detections.proxy } else { "Unknown" }
-                        $proxyCheckVpnProxy = "$pcVpn / $pcProxy"
+                        $pcVpn   = if ($null -ne $pcData.detections.vpn) { $pcData.detections.vpn } else { $null }
+                        $pcProxy = if ($null -ne $pcData.detections.proxy) { $pcData.detections.proxy } else { $null }
+
+                        if ($null -ne $pcVpn -or $null -ne $pcProxy) {
+                            $proxyCheckVpnProxy = "$pcVpn / $pcProxy"
+                        }
 
                         if (-not [string]::IsNullOrWhiteSpace([string]$pcData.detections.first_seen)) {
                             $firstSeen = [string]$pcData.detections.first_seen
@@ -291,18 +352,46 @@ function Get-ScamSpurTriage {
             Write-Verbose "ProxyCheck failed for $ip. $($_.Exception.Message)"
         }
 
-        Write-Output "##### $ip"
-        Write-Output "- Location: $location"
-        Write-Output "- ISP: $isp"
-        Write-Output "- Risk score: $score ($risk)"
-        Write-Output "- Proxy/TOR/Datacenter: $proxyTorDc"
-        Write-Output "- Provider: $provider"
-        Write-Output "- ProxyCheck VPN/Proxy: $proxyCheckVpnProxy"
-        Write-Output "- First seen: $firstSeen"
+        if (-not [string]::IsNullOrWhiteSpace($label)) {
+            Write-Output "##### ($label) $ip"
+        }
+        else {
+            Write-Output "##### $ip"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($location)) {
+            Write-Output "- Location: $location"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($isp)) {
+            Write-Output "- ISP: $isp"
+        }
+
+        if ($null -ne $score -or -not [string]::IsNullOrWhiteSpace($risk)) {
+            $scoreText = if ($null -ne $score) { $score } else { "Unknown" }
+            $riskText  = if (-not [string]::IsNullOrWhiteSpace($risk)) { $risk } else { "Unknown" }
+            Write-Output "- Risk score: $scoreText ($riskText)"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($proxyTorDc)) {
+            Write-Output "- Proxy/TOR/Datacenter: $proxyTorDc"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($provider)) {
+            Write-Output "- Provider: $provider"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($proxyCheckVpnProxy)) {
+            Write-Output "- ProxyCheck VPN/Proxy: $proxyCheckVpnProxy"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($firstSeen)) {
+            Write-Output "- First seen: $firstSeen"
+        }
+
         Write-Output ""
     }
 }
-
 ```
 
 ## Usage
@@ -334,7 +423,7 @@ Get-ScamSpurTriage -IPs "1.1.1.1" -Verbose
 ## Example output
 
 ```markdown
-##### 1.1.1.1
+##### (VPN) 1.1.1.1
 - Location: Santa Clara, United States
 - ISP: PacketHub S.A.
 - Risk score: 100 (very high)
@@ -377,13 +466,12 @@ First observed VPN/proxy detection timestamp from ProxyCheck.
 
 ## Operational flow
 
-1. Run the script
-2. Script imports the DPAPI-protected SecretStore password file
-3. Script unlocks `SecretVault`
-4. Script retrieves the three API secrets
-5. Script performs IP enrichment
-6. Vault stays unlocked for **9 hours**
-7. Vault locks again automatically after timeout
+1. Unlock vault
+2. Run function
+3. Secrets retrieved from SecretVault
+4. IP enrichment executed
+5. Output generated
+6. Vault auto-locks after 4 hours
 
 # Requirements
 
@@ -408,10 +496,4 @@ You will receive:
 
 Free tier is sufficient for 1 soc analyst. Do not use per department or team. This is for a single user.
 
-## Notes
 
-- No API keys are stored in the script
-- No manual unlock is required during the shift
-- No plaintext password is stored on disk
-- The password file is local-user and local-device bound
-- If the CLIXML password file is deleted, recreate it with the one-time setup step above
