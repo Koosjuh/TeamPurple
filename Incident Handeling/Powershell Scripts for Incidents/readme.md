@@ -18,6 +18,7 @@ This setup assumes:
 - The vault needs to be unlocked by the SecretVault password once every 4 hours
 - Safe Password for SecretVault in a **Password Manager**
 - Timeout is **4 hours** per shift
+- First time running this script will ask for password for SecretVault to unlock it. Then it will lock after 4 hours.
 
 This means the vault is:
 
