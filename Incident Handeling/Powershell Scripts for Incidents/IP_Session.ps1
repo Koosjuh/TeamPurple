@@ -1,21 +1,51 @@
 function Get-ScamSpurTriage {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$ApiUser,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ApiKey,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ProxyCheckApiKey,
-
         [Parameter(Mandatory = $false)]
         [string[]]$IPs,
 
         [Parameter(Mandatory = $false)]
-        [string]$BaseUrl = "https://api12.scamalytics.com/v3"
+        [string]$BaseUrl = "https://api12.scamalytics.com/v3",
+
+        [Parameter(Mandatory = $false)]
+        [string]$VaultName = "SecretVault",
+
+        [Parameter(Mandatory = $false)]
+        [string]$ScamalyticsUserSecretName = "ScamalyticsUser",
+
+        [Parameter(Mandatory = $false)]
+        [string]$ScamalyticsKeySecretName = "ScamalyticsKey",
+
+        [Parameter(Mandatory = $false)]
+        [string]$ProxyCheckKeySecretName = "ProxyCheckKey",
+
+        [Parameter(Mandatory = $false)]
+        [string]$SecretStorePasswordPath = "$env:APPDATA\PowerShell\SecretStore\secretstore-password.xml",
+
+        [Parameter(Mandatory = $false)]
+        [int]$VaultUnlockTimeoutSeconds = 32400
     )
+
+    try {
+        $null = Get-SecretVault -Name $VaultName -ErrorAction Stop
+
+        $storeStatus = Get-SecretStoreConfiguration -ErrorAction Stop
+        if ($storeStatus.Authentication -eq 'Password') {
+            if (-not (Test-Path -Path $SecretStorePasswordPath)) {
+                throw "SecretStore password file not found at: $SecretStorePasswordPath"
+            }
+
+            $vaultPassword = Import-Clixml -Path $SecretStorePasswordPath
+            Unlock-SecretStore -Password $vaultPassword -PasswordTimeout $VaultUnlockTimeoutSeconds -ErrorAction Stop
+        }
+
+        $ApiUser = Get-Secret -Vault $VaultName -Name $ScamalyticsUserSecretName -AsPlainText -ErrorAction Stop
+        $ApiKey = Get-Secret -Vault $VaultName -Name $ScamalyticsKeySecretName -AsPlainText -ErrorAction Stop
+        $ProxyCheckApiKey = Get-Secret -Vault $VaultName -Name $ProxyCheckKeySecretName -AsPlainText -ErrorAction Stop
+    }
+    catch {
+        throw "Failed to unlock vault or retrieve secrets. $($_.Exception.Message)"
+    }
 
     if (-not $IPs -or $IPs.Count -eq 0) {
         $inputIPs = Read-Host "Enter IP(s) (comma separated)"
@@ -159,7 +189,7 @@ function Get-ScamSpurTriage {
         catch {
             Write-Verbose "ProxyCheck failed for $ip. $($_.Exception.Message)"
         }
-        Write-Output "LOCATION"
+
         Write-Output "##### $ip"
         Write-Output "- Location: $location"
         Write-Output "- ISP: $isp"
