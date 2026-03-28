@@ -159,7 +159,7 @@ function Get-ScamSpurTriage {
         catch {
             Write-Verbose "ProxyCheck failed for $ip. $($_.Exception.Message)"
         }
-
+        Write-Output "LOCATION"
         Write-Output "##### $ip"
         Write-Output "- Location: $location"
         Write-Output "- ISP: $isp"
@@ -171,9 +171,3 @@ function Get-ScamSpurTriage {
         Write-Output ""
     }
 }
-
-Get-ScamSpurTriage `
-    -ApiUser "YOUR_SCAMALYTICS_USER" `
-    -ApiKey "YOUR_SCAMALYTICS_KEY" `
-    -ProxyCheckApiKey "YOUR_PROXYCHECK_KEY" `
-    -IPs "IP_HERE"
