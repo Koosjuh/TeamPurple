@@ -1,5 +1,8 @@
 # Get-ScamSpurTriage
 
+**Note**
+This is a legacy name. Spur does not support this, I now use Proxycheck.io.
+
 PowerShell function for SOC IP enrichment using:
 
 - **Scamalytics API v3** for location, ISP, risk score, and datacenter/TOR context
