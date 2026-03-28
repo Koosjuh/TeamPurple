@@ -73,22 +73,28 @@ Get-ScamSpurTriage `
 
 ## Multiple IPs
 
+```powershell
 Get-ScamSpurTriage `
     -ApiUser "SCAMALYTICS_USER" `
     -ApiKey "SCAMALYTICS_KEY" `
     -ProxyCheckApiKey "PROXYCHECK_KEY" `
     -IPs "1.1.1.1","8.8.8.8"
+```
 
 ## Interactive mode
 
+```powershell
 Get-ScamSpurTriage `
     -ApiUser "SCAMALYTICS_USER" `
     -ApiKey "SCAMALYTICS_KEY" `
     -ProxyCheckApiKey "PROXYCHECK_KEY"
+```
 
 You will then be prompted:
 
 Enter IP(s) (comma separated)
+
+```text
 Example Output
 ##### 1.1.1.1
 - Location: Santa Clara, United States
@@ -98,7 +104,9 @@ Example Output
 - Provider: NordVPN, with additional overlap noted for LunaProxy
 - ProxyCheck VPN/Proxy: True / False
 - First seen: 2026-02-05
-Field Explanation
+```
+
+### Field Explanation
 
 Location
 Derived from Scamalytics geolocation sources.
@@ -154,45 +162,20 @@ Some residential proxies may not resolve to provider names
 First seen timestamp depends on ProxyCheck dataset
 Output Format
 
-The function outputs SOC triage-ready Markdown:
-
-One block per IP
-Copy/paste friendly
-Suitable for incident notes
-No post-processing required
-Example SOC Use
-Investigate suspicious sign-in IP
-Identify VPN provider used
-Determine datacenter vs residential
-Validate impossible travel alerts
-Identify anonymization infrastructure
-Determine new vs known VPN nodes
-Function Name
-
-Current name:
+### Current name:
 
 Get-ScamSpurTriage
 
 The name is legacy. SPUR is no longer used.
 
-Suggested future rename:
-
-Get-IpTriageEnrichment
-Rate Limits
-
-Scamalytics
-Depends on plan (typically 5,000/month)
-
-ProxyCheck
-Free tier sufficient for SOC triage
-
-Security
+### Security
 
 Do not hardcode API keys in scripts.
 Use variables or secure storage.
 
 Example:
 
+```text
 $ScamUser = "..."
 $ScamKey  = "..."
 $ProxyKey = "..."
@@ -202,3 +185,4 @@ Get-ScamSpurTriage `
     -ApiKey $ScamKey `
     -ProxyCheckApiKey $ProxyKey `
     -IPs "1.1.1.1"
+```
