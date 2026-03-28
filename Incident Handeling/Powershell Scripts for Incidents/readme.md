@@ -8,6 +8,14 @@ PowerShell function for SOC triage enrichment using:
 The function outputs triage-ready Markdown blocks per IP.
 
 ---
+*Interactive Mode*
+
+```powershell
+Get-ScamSpurTriage `
+    -ApiUser "YOUR_SCAMALYTICS_USER" `
+    -ApiKey "YOUR_SCAMALYTICS_KEY" `
+    -ProxyCheckApiKey "YOUR_PROXYCHECK_KEY"
+```
 
 # Features
 
