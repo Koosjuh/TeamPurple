@@ -73,7 +73,13 @@ This means:
 
 ```powershell
 Set-Secret -Vault SecretVault -Name ScamalyticsUser -Secret "YOUR_SCAMALYTICS_USER"
+```
+
+```powershell
 Set-Secret -Vault SecretVault -Name ScamalyticsKey -Secret "YOUR_SCAMALYTICS_KEY"
+```
+
+```powershell
 Set-Secret -Vault SecretVault -Name ProxyCheckKey -Secret "YOUR_PROXYCHECK_KEY"
 ```
 
