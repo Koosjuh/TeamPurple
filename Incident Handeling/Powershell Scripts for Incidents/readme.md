@@ -406,7 +406,7 @@ You will receive:
 
 - ProxyCheck API key
 
-Free tier is sufficient for SOC triage.
+Free tier is sufficient for 1 soc analyst. Do not use per department or team. This is for a single user.
 
 ## Notes
 
