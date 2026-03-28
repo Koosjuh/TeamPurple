@@ -48,7 +48,7 @@ If not already done:
 Register-SecretVault -Name SecretVault -ModuleName Microsoft.PowerShell.SecretStore -DefaultVault
 ```
 
-## SecretStore configuration for your use case
+## SecretStore configuration
 
 Configure the store for:
 
@@ -381,6 +381,29 @@ First observed VPN/proxy detection timestamp from ProxyCheck.
 5. Script performs IP enrichment
 6. Vault stays unlocked for **9 hours**
 7. Vault locks again automatically after timeout
+
+# Requirements
+
+You need API keys for:
+
+## Scamalytics
+
+https://scamalytics.com/ip/api/enquiry?monthly_api_calls=5000
+
+You will receive:
+
+- API User
+- API Key
+
+## ProxyCheck
+
+https://proxycheck.io
+
+You will receive:
+
+- ProxyCheck API key
+
+Free tier is sufficient for SOC triage.
 
 ## Notes
 
