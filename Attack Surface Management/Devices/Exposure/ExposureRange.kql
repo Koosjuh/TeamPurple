@@ -1,5 +1,48 @@
 let LatestDevice =
     DeviceInfo
+    | where Timestamp > ago(30d)
+    | where DeviceCategory == "Endpoint"
+    | summarize arg_max(Timestamp, *) by DeviceId;
+let ActiveDevices =
+    LatestDevice
+    | where SensorHealthState has "Active";
+let ExposureCounts =
+    ActiveDevices
+    | where ExposureLevel in~ ("High", "Medium", "Low", "None")
+    | summarize NrOfActiveDevices = count() by ExposureLevel
+    | extend Sort = case(
+        ExposureLevel =~ "High", 1,
+        ExposureLevel =~ "Medium", 2,
+        ExposureLevel =~ "Low", 3,
+        99
+    );
+let InternetFacingCount =
+    ActiveDevices
+    | where IsInternetFacing == true
+    | summarize NrOfActiveDevices = count()
+    | extend ExposureLevel = "All levels, internet facing", Sort = 5;
+let NoDataCount =
+    DeviceInfo
+    | where DeviceCategory == "Endpoint" and ExposureLevel == "None" and SensorHealthState has "Active"
+    | summarize NrOfActiveDevices = count()
+    | extend ExposureLevel = "No Data Available", Sort = 4;
+let Rows =
+    datatable(ExposureLevel:string, Sort:int, NrOfActiveDevices:long)
+    [
+        "High", 1, 0,
+        "Medium", 2, 0,
+        "Low", 3, 0,
+        "No Data Available", 4, 0,
+        "All levels, internet facing", 5, 0
+    ];
+Rows
+| union ExposureCounts, NoDataCount, InternetFacingCount
+| summarize NrOfActiveDevices = max(NrOfActiveDevices) by ExposureLevel
+| project ExposureLevel, NrOfActiveDevices
+
+===========================================================================================LEGACY=============================================================================================================================
+let LatestDevice =
+    DeviceInfo
     | summarize arg_max(Timestamp, *) by DeviceId;
 let ActiveDevices =
     LatestDevice
