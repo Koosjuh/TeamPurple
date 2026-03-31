@@ -11,14 +11,29 @@ UPN:
 - [Valid MFA]
 - [Identity Info]
 - [Office Activity]
+```
 
-Location
-#####
-**Location Details:**
+- Assumes use of IP validation tool for other context
+
+```text
 - [IP interactive]
 - [IP MFA]
 - [IP Non interactive]
 ```
+
+### On-Premis
+
+```text
+**User**
+#####
+User:
+- [IdentityInfo]
+- [On Premis Account Changes]
+- [OnPremis Logon]
+- [IdentityLogonEvents]
+- [DeviceLogonEvents]
+```
+
 #### Session Check
 ```kql
 // ws-vit-c-aad-user-audit-log.kql
@@ -159,17 +174,3 @@ IdentityInfo
 | project TimeGenerated, AccountUPN, AccountObjectId, AccountName, UserType, AccountCreationTime, AccountDisplayName, Department, JobTitle, AssignedRoles, GroupMembership, OnPremisesDistinguishedName
 | sort by TimeGenerated desc
 ```
-### On-Premis
-
-```text
-**User**
-#####
-User:
-- [IdentityInfo]
-- [On Premis Account Changes]
-- [OnPremis Logon]
-- [IdentityLogonEvents]
-- [DeviceLogonEvents]
-```
-
-
