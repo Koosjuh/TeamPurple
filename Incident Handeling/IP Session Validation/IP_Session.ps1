@@ -531,81 +531,91 @@ function Get-ScamSpurTriage {
             Write-Verbose "AbuseIPDB failed for ${ip}. $($_.Exception.Message)"
         }
 
-        if ($labels.Count -eq 0) {
-            Add-UniqueItem $labels "Normal"
-        }
-
         $headerLabels = ($labels | ForEach-Object { "[$_]" }) -join " "
-        Write-Output "##### $headerLabels $ip"
 
+        if ([string]::IsNullOrWhiteSpace($headerLabels)) {
+            Write-Output "##### $ip"
+        }
+        else {
+            Write-Output "##### $headerLabels $ip"
+        }
+        
         if (-not [string]::IsNullOrWhiteSpace($location)) {
             Write-Output "- [Scamalytics] Location: $location"
         }
-
+        
         if (-not [string]::IsNullOrWhiteSpace($isp)) {
             Write-Output "- [Scamalytics] ISP: $isp"
         }
-
+        
+        if ($ext -and $ext.dbip -and -not [string]::IsNullOrWhiteSpace([string]$ext.dbip.connection_type)) {
+            Write-Output "- [Scamalytics: Connection]: $([string]$ext.dbip.connection_type)"
+        }
+        
+        if ($pcData -and $pcData.network -and -not [string]::IsNullOrWhiteSpace([string]$pcData.network.type)) {
+            Write-Output "- [ProxyCheck: Connection]: $([string]$pcData.network.type)"
+        }
+        
+        if (-not [string]::IsNullOrWhiteSpace([string]$abuseUsageType)) {
+            Write-Output "- [AbuseIPDB: Usage]: $abuseUsageType"
+        }
+        
         ## Write-Output "- Labels: $(($labels -join ', '))"
-
+        
         if ($subTypes.Count -gt 0) {
             Write-Output "- [ProxyCheck] Subtype(s): $(($subTypes -join ', '))"
         }
-
+        
         if ($null -ne $score -or -not [string]::IsNullOrWhiteSpace($risk)) {
             $scoreText = if ($null -ne $score) { $score } else { "Unknown" }
             $riskText  = if (-not [string]::IsNullOrWhiteSpace($risk)) { $risk } else { "Unknown" }
             Write-Output "- [Scamalytics] risk: $scoreText ($riskText)"
         }
-
+        
         if (-not [string]::IsNullOrWhiteSpace($provider)) {
             Write-Output "- [ProxyCheck] Provider: $provider"
         }
-
+        
         if (-not [string]::IsNullOrWhiteSpace($proxyCheckVpnProxy)) {
             Write-Output "- [ProxyCheck] VPN/Proxy: $proxyCheckVpnProxy"
         }
-
+        
         if (-not [string]::IsNullOrWhiteSpace($firstSeen)) {
             Write-Output "- [ProxyCheck] first seen: $firstSeen"
         }
-
+        
         if (-not [string]::IsNullOrWhiteSpace($lastSeen)) {
             Write-Output "- [ProxyCheck] last seen: $lastSeen"
         }
-
+        
         if ($null -ne $abuseConfidence) {
             Write-Output "- [AbuseIPDB] confidence: $abuseConfidence"
         }
-
+        
         if ($null -ne $abuseReports) {
             Write-Output "- [AbuseIPDB] reports: $abuseReports in last $AbuseIPDBMaxAgeDays days"
         }
-
+        
         if ($abuseReports -gt 0 -and $abuseLastReported) {
             Write-Output "- [AbuseIPDB] last reported: $abuseLastReported"
         }
-
-        if (-not [string]::IsNullOrWhiteSpace([string]$abuseUsageType)) {
-            Write-Output "- [AbuseIPDB] usage type: $abuseUsageType"
-        }
-
+        
         if (-not [string]::IsNullOrWhiteSpace([string]$abuseDomain)) {
             Write-Output "- [AbuseIPDB] domain: $abuseDomain"
         }
-
+        
         if ($null -ne $abuseWhitelisted) {
             Write-Output "- [AbuseIPDB] whitelisted: $abuseWhitelisted"
         }
-
+        
         if ($abuseWhitelisted -eq $true) {
             Write-Output "- [AbuseIPDB] IMPORTANT NOTE: IP is whitelisted. Whitelisted netblocks often belong to trusted providers but may still host abused cloud infrastructure. Validate context before trusting."
         }
-
+        
         if ($abuseLatestCategories.Count -gt 0) {
             Write-Output "- [AbuseIPDB] latest categories: $(($abuseLatestCategories -join ', '))"
         }
-
+        
         Write-Output ""
     }
 }
