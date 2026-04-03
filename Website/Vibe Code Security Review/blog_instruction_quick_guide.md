@@ -76,8 +76,8 @@ The final output should be a single HTML report that includes:
 - Remediation priority
 - Assumptions and unknowns
 
-The report should contain clickable links so the user can inspect the file, line, or runtime behavior themselves.
-
 ## Important limitation
+
+**I can not stress this enough!**
 
 This helps a lot, but it is still an AI-assisted review. If the project is going to be used seriously, exposed to the internet, or will handle real users or sensitive data, a real developer should take over and apply these security principles properly. This is no replacement for a REAL pentest, a REAL developer. If you are going in production with out a real human in the loop, that is at your own risk. This guide/review serves as a base, it's not the final product.
