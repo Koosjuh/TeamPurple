@@ -1,0 +1,1383 @@
+{
+  "meta": {
+    "schema_name": "Unified-WebApp-Code-and-Security-Review",
+    "schema_version": "1.2",
+    "assessment_target": {
+      "project_name": "NAME_HERE",
+      "project_type": "web_app",
+      "environment": "production",
+      "internet_exposed": true,
+      "contains_sensitive_data": false,
+      "authentication_required": true,
+      "notes": ""
+    },
+    "frameworks": [
+      "NIST SP 800-218 SSDF",
+      "OWASP ASVS",
+      "OWASP Top 10",
+      "OWASP Web Security Testing Guide",
+      "Google Engineering Practices - Code Review"
+    ],
+    "status_enum": [
+      "unknown",
+      "implemented",
+      "missing",
+      "not_applicable",
+      "critical_mistake"
+    ],
+    "severity_enum": [
+      "informational",
+      "low",
+      "medium",
+      "high",
+      "critical"
+    ],
+    "confidence_enum": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "status_rules": {
+      "unknown": "The control or review item has not yet been evaluated or available evidence is insufficient to determine a final status.",
+      "implemented": "The control exists and is correctly implemented based on available evidence.",
+      "missing": "The control is expected for this project but is absent or insufficient.",
+      "not_applicable": "The control does not apply to this architecture or feature set and the reason must be explicit.",
+      "critical_mistake": "The control is implemented in a dangerously insecure way or a severe design flaw exists that should be fixed immediately."
+    },
+    "review_order": [
+      "repository_inventory_and_coverage",
+      "code_review_per_file",
+      "security_review_per_file",
+      "har_review_per_action",
+      "correlation_between_code_har_and_declared_controls",
+      "final_risk_rating_and_remediation_order"
+    ],
+    "review_instructions": {
+      "goal": "Assess the project against code quality, maintainability, security, and runtime behavior requirements using repo files, HAR evidence, and declared architecture.",
+      "expected_behavior": "Mark every control with one status only and provide evidence-based reasoning.",
+      "strict_mode": true,
+      "zero_trust": true,
+      "do_not_assume_secure_defaults": true,
+      "do_not_mark_implemented_without_evidence": true,
+      "do_not_mark_not_applicable_without_explicit_reason": true,
+      "report_unknown_when_evidence_is_insufficient": true,
+      "review_every_file_or_account_for_it_explicitly": true,
+      "repo_review_must_precede_security_review": true,
+      "har_review_must_validate_runtime_claims": true
+    }
+  },
+  "system_context": {
+    "architecture": {
+      "frontend": {
+        "framework": "",
+        "is_static_site": false,
+        "stores_tokens_in_browser": false,
+        "client_side_routing": false
+      },
+      "backend": {
+        "exists": true,
+        "framework": "",
+        "api_type": "rest",
+        "server_side_rendering": false
+      },
+      "database": {
+        "exists": true,
+        "type": "",
+        "contains_pii": false,
+        "contains_credentials": false
+      },
+      "hosting": {
+        "provider": "",
+        "ci_cd": "",
+        "public_repository": false,
+        "uses_secrets_manager": false
+      },
+      "integrations": [
+        {
+          "name": "",
+          "purpose": "",
+          "handles_sensitive_data": false
+        }
+      ]
+    },
+    "trust_boundaries": [
+      {
+        "name": "browser_to_backend",
+        "description": "User browser communicating with backend API."
+      }
+    ],
+    "auth_model": {
+      "enabled": true,
+      "type": "session_or_jwt_or_oauth",
+      "mfa_supported": false,
+      "rbac_used": false
+    },
+    "data_flows": [
+      {
+        "name": "",
+        "source": "",
+        "destination": "",
+        "data_type": "",
+        "security_notes": ""
+      }
+    ],
+    "possible_user_actions_for_har": [
+      {
+        "action_name": "anonymous_browse_homepage",
+        "required": true,
+        "description": "Load homepage and key public pages.",
+        "expected_security_properties": [
+          "https_only",
+          "no_sensitive_data_exposed",
+          "security_headers_present_if_applicable"
+        ]
+      },
+      {
+        "action_name": "login",
+        "required": false,
+        "description": "Authenticate with a normal user account.",
+        "expected_security_properties": [
+          "secure_transport",
+          "no_credentials_logged_or_echoed",
+          "session_or_token_handling_secure",
+          "no_verbose_auth_errors"
+        ]
+      },
+      {
+        "action_name": "logout",
+        "required": false,
+        "description": "Terminate session.",
+        "expected_security_properties": [
+          "session_invalidated",
+          "no_residual_access_after_logout"
+        ]
+      },
+      {
+        "action_name": "form_submission",
+        "required": false,
+        "description": "Submit any public or authenticated form.",
+        "expected_security_properties": [
+          "server_side_validation",
+          "csrf_protection_if_applicable",
+          "no_sensitive_response_leakage"
+        ]
+      },
+      {
+        "action_name": "failed_login",
+        "required": false,
+        "description": "Attempt invalid authentication.",
+        "expected_security_properties": [
+          "sanitized_error_messages",
+          "no_account_enumeration",
+          "rate_limiting_or_abuse_controls_if_applicable"
+        ]
+      },
+      {
+        "action_name": "authenticated_navigation",
+        "required": false,
+        "description": "Browse authenticated pages and invoke main API actions.",
+        "expected_security_properties": [
+          "authorization_enforced",
+          "no_idor_behavior",
+          "no_sensitive_data_overexposure"
+        ]
+      },
+      {
+        "action_name": "admin_action",
+        "required": false,
+        "description": "Perform an admin-only action if the app has administrative features.",
+        "expected_security_properties": [
+          "strong_server_side_authorization",
+          "no_client_side_only_trust",
+          "auditability_if_applicable"
+        ]
+      },
+      {
+        "action_name": "file_upload",
+        "required": false,
+        "description": "Upload a supported file if upload functionality exists.",
+        "expected_security_properties": [
+          "file_type_validation",
+          "upload_restrictions",
+          "no_dangerous_execution_or_path_traversal"
+        ]
+      }
+    ]
+  },
+  "repository_review": {
+    "coverage_rules": {
+      "must_enumerate_all_files": true,
+      "must_account_for_every_file": true,
+      "must_not_silently_ignore_files": true,
+      "allowed_file_review_statuses": [
+        "reviewed",
+        "not_security_relevant",
+        "skipped"
+      ],
+      "skipped_requires_reason": true,
+      "coverage_formula": "reviewed + not_security_relevant + skipped = total_files"
+    },
+    "repository_inventory": {
+      "total_files": 0,
+      "reviewed_files": 0,
+      "not_security_relevant_files": 0,
+      "skipped_files": 0,
+      "coverage_complete": false,
+      "inventory": []
+    },
+    "per_file_review_template": {
+      "file_path": "",
+      "language_or_type": "",
+      "file_review_status": "reviewed",
+      "skip_reason": "",
+      "purpose": "",
+      "security_relevance": "",
+      "google_code_review": {
+        "status": "unknown",
+        "severity": "informational",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "security_review": {
+        "status": "unknown",
+        "severity": "informational",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "findings": []
+    }
+  },
+  "code_review_framework": {
+    "source": "Google Engineering Practices - Code Review",
+    "review_objective": "Assess correctness, design, readability, maintainability, consistency, and complexity before performing the security assessment.",
+    "instructions": {
+      "review_code_first": true,
+      "review_security_after_code_quality": true,
+      "require_per_file_code_review": true,
+      "do_not_ignore_generated_or_config_files_if_security_relevant": true,
+      "focus_on_maintainability_and_correctness_before_declaring_security_confidence": true,
+      "code_review_must_not_change_security_severity_directly": true
+    },
+    "principles": {
+      "correctness": {
+        "description": "Does the code do what it is intended to do and handle edge cases safely?",
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "design": {
+        "description": "Is the design appropriate for the system, responsibilities clear, and trust boundaries respected?",
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "functionality": {
+        "description": "Does the implementation fulfill expected behavior without relying on unsafe assumptions?",
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "complexity": {
+        "description": "Is the implementation unnecessarily complex or difficult to reason about, increasing defect and security risk?",
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "tests": {
+        "description": "Are there sufficient tests or validation steps for important code paths and security-sensitive behavior?",
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "naming": {
+        "description": "Are identifiers clear and do they reduce the chance of misuse or misunderstanding?",
+        "status": "unknown",
+        "severity": "low",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "comments_and_documentation": {
+        "description": "Are comments and documentation accurate, minimal, and useful, including security-sensitive assumptions?",
+        "status": "unknown",
+        "severity": "low",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "style_and_consistency": {
+        "description": "Does the code follow consistent conventions, patterns, and framework usage?",
+        "status": "unknown",
+        "severity": "low",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "maintainability": {
+        "description": "Can future reviewers and developers safely modify the code without introducing defects?",
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      }
+    },
+    "code_review_requirements": {
+      "must_identify_high_risk_files": true,
+      "high_risk_file_categories": [
+        "authentication",
+        "authorization",
+        "middleware",
+        "api_handlers",
+        "config",
+        "templates",
+        "workflows",
+        "deployment",
+        "secrets_handling",
+        "client_storage",
+        "third_party_integrations"
+      ],
+      "must_flag_hard_to_review_code": true,
+      "must_flag_unnecessary_complexity": true,
+      "must_note_missing_tests_for_security_sensitive_paths": true
+    }
+  },
+  "assessment": {
+    "ssdf": {
+      "prepare_the_organization": {
+        "PO.1_security_requirements_defined": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PO"
+          ]
+        },
+        "PO.2_roles_responsibilities_defined": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PO"
+          ]
+        },
+        "PO.3_secure_coding_guidelines_exist": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PO"
+          ]
+        },
+        "PO.4_threat_model_exists": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PO"
+          ]
+        },
+        "PO.5_security_training_or_awareness_present": {
+          "status": "unknown",
+          "severity": "informational",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PO"
+          ]
+        }
+      },
+      "protect_the_software": {
+        "PS.1_secrets_management_implemented": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PS"
+          ]
+        },
+        "PS.2_least_privilege_access_applied": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PS"
+          ]
+        },
+        "PS.3_dependency_integrity_and_version_pinning": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PS"
+          ]
+        },
+        "PS.4_build_pipeline_protected": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PS"
+          ]
+        },
+        "PS.5_artifacts_and_releases_protected": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PS"
+          ]
+        },
+        "PS.6_sensitive_data_protection_defined": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PS"
+          ]
+        }
+      },
+      "produce_well_secured_software": {
+        "PW.1_code_review_performed": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PW"
+          ]
+        },
+        "PW.2_sast_or_equivalent_review_performed": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PW"
+          ]
+        },
+        "PW.3_input_validation_implemented": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PW",
+            "OWASP ASVS V5"
+          ]
+        },
+        "PW.4_output_encoding_or_xss_controls_present": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PW",
+            "OWASP ASVS V5"
+          ]
+        },
+        "PW.5_authentication_correctly_implemented": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PW",
+            "OWASP ASVS V2"
+          ]
+        },
+        "PW.6_authorization_correctly_implemented": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PW",
+            "OWASP ASVS V4"
+          ]
+        },
+        "PW.7_secure_error_handling_present": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PW",
+            "OWASP Top 10 Security Misconfiguration"
+          ]
+        },
+        "PW.8_security_logging_and_auditing_present": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PW",
+            "OWASP ASVS V7"
+          ]
+        },
+        "PW.9_secure_defaults_used": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF PW",
+            "OWASP Secure by Design principles"
+          ]
+        },
+        "PW.10_parameterized_queries_used": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Top 10 Injection",
+            "OWASP ASVS V5"
+          ]
+        }
+      },
+      "respond_to_vulnerabilities": {
+        "RV.1_dependency_scanning_performed": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF RV"
+          ]
+        },
+        "RV.2_vulnerability_management_process_exists": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF RV"
+          ]
+        },
+        "RV.3_security_testing_before_release": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF RV",
+            "OWASP WSTG"
+          ]
+        },
+        "RV.4_incident_response_or_fix_process_defined": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "NIST SSDF RV"
+          ]
+        }
+      }
+    },
+    "owasp": {
+      "architecture_and_configuration": {
+        "OWASP.SECCFG.1_https_enforced": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V9"
+          ]
+        },
+        "OWASP.SECCFG.2_hsts_enabled": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V9"
+          ]
+        },
+        "OWASP.SECCFG.3_security_headers_present": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V14"
+          ]
+        },
+        "OWASP.SECCFG.4_debug_mode_disabled_in_production": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Top 10 Security Misconfiguration"
+          ]
+        },
+        "OWASP.SECCFG.5_unnecessary_endpoints_removed": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Attack Surface Reduction"
+          ]
+        }
+      },
+      "authentication_and_session_management": {
+        "OWASP.AUTH.1_authentication_required_where_expected": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V2"
+          ]
+        },
+        "OWASP.AUTH.2_passwords_not_stored_insecurely": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V2"
+          ]
+        },
+        "OWASP.AUTH.3_session_tokens_protected": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V3"
+          ]
+        },
+        "OWASP.AUTH.4_secure_cookie_flags_used": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V3"
+          ]
+        },
+        "OWASP.AUTH.5_mfa_supported_for_sensitive_access": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V2"
+          ]
+        }
+      },
+      "authorization_and_access_control": {
+        "OWASP.AUTHZ.1_server_side_authorization_checks": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V4"
+          ]
+        },
+        "OWASP.AUTHZ.2_idor_protection": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Top 10 Broken Access Control"
+          ]
+        },
+        "OWASP.AUTHZ.3_admin_functionality_restricted": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V4"
+          ]
+        },
+        "OWASP.AUTHZ.4_least_privilege_roles_used": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V4"
+          ]
+        }
+      },
+      "input_output_and_injection": {
+        "OWASP.INPUT.1_server_side_input_validation": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V5"
+          ]
+        },
+        "OWASP.INPUT.2_allowlist_validation_used_where_possible": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V5"
+          ]
+        },
+        "OWASP.INPUT.3_sql_injection_prevention": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Top 10 Injection"
+          ]
+        },
+        "OWASP.INPUT.4_command_injection_prevention": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Top 10 Injection"
+          ]
+        },
+        "OWASP.INPUT.5_xss_prevention": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V5"
+          ]
+        },
+        "OWASP.INPUT.6_csrf_protection": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V4",
+            "OWASP ASVS V3"
+          ]
+        },
+        "OWASP.INPUT.7_file_upload_validation_and_restrictions": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP File Upload Guidance"
+          ]
+        },
+        "OWASP.INPUT.8_path_traversal_prevention": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP WSTG"
+          ]
+        }
+      },
+      "api_and_client_security": {
+        "OWASP.API.1_cors_restricted": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP API Security"
+          ]
+        },
+        "OWASP.API.2_sensitive_data_not_exposed_to_client": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Top 10 Cryptographic Failures",
+            "OWASP API Security"
+          ]
+        },
+        "OWASP.API.3_no_client_side_trust_for_authorization": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Broken Access Control"
+          ]
+        },
+        "OWASP.API.4_rate_limiting_or_abuse_protection_present": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP API Security"
+          ]
+        },
+        "OWASP.API.5_api_error_messages_sanitized": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Security Misconfiguration"
+          ]
+        }
+      },
+      "cryptography_and_data_protection": {
+        "OWASP.CRYPTO.1_sensitive_data_encrypted_in_transit": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V9"
+          ]
+        },
+        "OWASP.CRYPTO.2_sensitive_data_encrypted_at_rest_where_needed": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V9"
+          ]
+        },
+        "OWASP.CRYPTO.3_no_hardcoded_secrets_or_keys": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Secrets Management",
+            "NIST SSDF PS"
+          ]
+        },
+        "OWASP.CRYPTO.4_secure_password_hashing_used": {
+          "status": "unknown",
+          "severity": "critical",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Password Storage"
+          ]
+        }
+      },
+      "logging_monitoring_and_operations": {
+        "OWASP.LOG.1_security_relevant_events_logged": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Logging and Monitoring Failures"
+          ]
+        },
+        "OWASP.LOG.2_sensitive_data_not_logged": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP ASVS V7"
+          ]
+        },
+        "OWASP.LOG.3_monitoring_or_alerting_exists": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Logging and Monitoring Failures"
+          ]
+        }
+      },
+      "dependency_and_supply_chain_security": {
+        "OWASP.SUPPLY.1_dependencies_pinned": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Vulnerable and Outdated Components"
+          ]
+        },
+        "OWASP.SUPPLY.2_dependency_scanning_enabled": {
+          "status": "unknown",
+          "severity": "high",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Vulnerable and Outdated Components",
+            "NIST SSDF RV"
+          ]
+        },
+        "OWASP.SUPPLY.3_unnecessary_dependencies_removed": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Attack Surface Reduction"
+          ]
+        },
+        "OWASP.SUPPLY.4_third_party_scripts_reviewed": {
+          "status": "unknown",
+          "severity": "medium",
+          "confidence": "low",
+          "evidence": "",
+          "source_location": "",
+          "reason": "",
+          "remediation": "",
+          "references": [
+            "OWASP Third Party JavaScript Management"
+          ]
+        }
+      }
+    }
+  },
+  "har_review": {
+    "instructions": {
+      "user_must_record_har": true,
+      "user_should_open_devtools_f12": true,
+      "user_should_record_real_user_flows": true,
+      "har_must_be_compared_against_code_and_controls": true,
+      "missing_har_evidence_should_not_be_treated_as_proof_of_security": true
+    },
+    "required_review_dimensions": {
+      "transport_security": {
+        "status": "unknown",
+        "severity": "high",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "response_headers": {
+        "status": "unknown",
+        "severity": "high",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "cookie_security": {
+        "status": "unknown",
+        "severity": "high",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "cors_behavior": {
+        "status": "unknown",
+        "severity": "high",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "authentication_flow_behavior": {
+        "status": "unknown",
+        "severity": "critical",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "authorization_behavior": {
+        "status": "unknown",
+        "severity": "critical",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "sensitive_data_exposure_in_requests_or_responses": {
+        "status": "unknown",
+        "severity": "critical",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "csrf_indicators_if_applicable": {
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "rate_limiting_or_abuse_controls_if_observable": {
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "error_handling_and_information_disclosure": {
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      },
+      "third_party_requests_and_tracking_surface": {
+        "status": "unknown",
+        "severity": "medium",
+        "confidence": "low",
+        "evidence": "",
+        "source_location": "",
+        "reason": "",
+        "remediation": ""
+      }
+    },
+    "per_action_review_template": {
+      "action_name": "",
+      "observed_requests": [],
+      "observed_responses": [],
+      "security_findings": [],
+      "matches_expected_behavior": "unknown",
+      "evidence": "",
+      "source_location": "",
+      "reason": "",
+      "remediation": ""
+    }
+  },
+  "correlation_review": {
+    "instructions": {
+      "must_compare_json_claims_to_repo": true,
+      "must_compare_repo_to_har": true,
+      "must_compare_har_to_expected_actions": true,
+      "must_call_out_mismatches_explicitly": true
+    },
+    "required_outputs": {
+      "controls_claimed_but_not_proven": [],
+      "controls_present_in_code_but_not_observed_at_runtime": [],
+      "runtime_behaviors_not_explained_by_code_or_json": [],
+      "dangerous_mismatches": []
+    }
+  },
+  "summary": {
+    "overall_status": "unknown",
+    "overall_code_review_status": "unknown",
+    "overall_security_review_status": "unknown",
+    "overall_runtime_validation_status": "unknown",
+    "highest_risk_findings": [],
+    "critical_mistakes": [],
+    "missing_controls": [],
+    "not_applicable_controls": [],
+    "implemented_controls": [],
+    "unknown_controls": [],
+    "recommended_fix_order": [
+      "critical_mistake",
+      "authentication_and_authorization",
+      "input_validation_and_injection",
+      "secrets_management",
+      "transport_and_headers",
+      "dependency_and_supply_chain",
+      "logging_and_monitoring"
+    ]
+  },
+  "ai_output_requirements": {
+    "render_format": "html",
+    "html_requirements": {
+      "must_generate_single_html_report": true,
+      "must_include_clickable_links": true,
+      "must_link_to_repo_file_or_line_if_available": true,
+      "must_link_to_runtime_endpoint_or_action_if_available": true,
+      "must_separate_code_review_from_security_review": true,
+      "must_show_evidence_and_reasoning": true,
+      "must_show_coverage_summary": true,
+      "must_show_har_validation_section": true
+    },
+    "must_do": [
+      "Enumerate and account for every repository file.",
+      "Perform code review per relevant file before performing the security review.",
+      "Use Google code review principles when assessing code quality and maintainability.",
+      "Perform security review per relevant file using SSDF and OWASP-aligned controls.",
+      "Review the HAR file per user action and per observed request or response where relevant.",
+      "Compare repo evidence, HAR evidence, and declared controls.",
+      "Assess every control.",
+      "Use only the allowed status values.",
+      "Explain why each control is implemented, missing, not applicable, critical mistake, or still unknown.",
+      "Flag clear design flaws as critical_mistake.",
+      "Do not mark not_applicable unless justified.",
+      "Do not mark implemented without evidence.",
+      "Provide evidence for every finding where possible."
+    ],
+    "must_return": {
+      "repository_coverage_summary": {
+        "total_files": 0,
+        "reviewed_files": 0,
+        "not_security_relevant_files": 0,
+        "skipped_files": 0,
+        "coverage_complete": false
+      },
+      "executive_summary": "",
+      "full_file_inventory": [],
+      "per_file_code_review_results": [],
+      "per_file_security_review_results": [],
+      "per_action_har_review_results": [],
+      "control_results": [],
+      "top_10_findings": [],
+      "critical_mistakes": [],
+      "priority_remediation_plan": [],
+      "correlation_mismatches": [],
+      "assumptions_and_unknowns": [],
+      "coverage_validation_statement": ""
+    }
+  }
+}

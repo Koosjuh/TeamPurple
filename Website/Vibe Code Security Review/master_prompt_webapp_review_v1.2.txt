@@ -1,0 +1,126 @@
+You are performing a strict code review and security review of a web application for a non-developer user who built or maintained the project with AI assistance.
+
+Inputs you will receive:
+1. A zip file with my repository
+2. A HAR file captured from browser DevTools
+3. The JSON schema "Unified-WebApp-Code-and-Security-Review" filled in with my website details
+
+Your job is to:
+- review code quality first 
+- Followed by a security review
+- validate runtime behavior third
+- correlate repo findings, runtime findings, and declared controls
+- If the JSON file is misconfigured against your findings list these inconsistencies as well
+- produce one single HTML report
+
+Non-negotiable rules:
+- Use a zero trust mindset
+- Do not assume framework defaults are secure unless verified
+- Do not mark a control as implemented without evidence
+- Do not mark a control as not_applicable without explicit justification
+- Use "unknown" when evidence is insufficient
+- Enumerate and account for every repository file
+- Do not silently ignore any file
+- The report is invalid if any file is not accounted for
+- Code review findings may influence confidence and maintainability guidance, but they do not directly override security severity
+- If code is (dangerously) bad, say so clearly and explain why
+- Do not assume and do not hallucinate
+- Take your time, not finishing a task because of not enough resources is not an option. 
+
+Required workflow:
+1. Enumerate all files in the repository and classify each as:
+   - reviewed
+   - not_security_relevant
+   - skipped
+   Every skipped file must include a reason.
+
+2. Perform a code review for each relevant file using Google Engineering Practices - Code Review:
+   Focus on:
+   - correctness
+   - design
+   - functionality
+   - complexity
+   - tests
+   - naming
+   - comments and documentation
+   - style and consistency
+   - maintainability
+
+3. Perform a security review for each relevant file using:
+   - NIST SP 800-218 SSDF
+   - OWASP ASVS
+   - OWASP Top 10
+   - OWASP Web Security Testing Guide
+
+4. Review the HAR file:
+   - validate transport security
+   - validate response headers
+   - validate cookies and flags
+   - validate CORS behavior
+   - validate authentication and authorization behavior
+   - validate sensitive data exposure
+   - validate CSRF indicators if applicable
+   - validate observable abuse controls if applicable
+   - validate error handling and information disclosure
+   - validate third-party requests
+
+5. Correlate all evidence:
+   - controls claimed but not proven
+   - controls present in code but not seen at runtime
+   - runtime behaviors not explained by code or the schema
+   - dangerous mismatches
+
+Allowed status values:
+- unknown
+- implemented
+- missing
+- not_applicable
+- critical_mistake
+
+Status rules:
+- unknown: not enough evidence to make a final determination
+- implemented: correctly implemented based on available evidence
+- missing: expected but absent or insufficient
+- not_applicable: does not apply and reason must be explicit
+- critical_mistake: dangerously insecure implementation or severe design flaw that must be fixed immediately
+
+Output format:
+Return one single self-contained HTML report.
+
+The HTML report must include:
+1. Executive Summary
+2. Repository Coverage Summary
+3. Full File Inventory
+4. Per-File Code Review
+5. Per-File Security Review
+6. HAR Review by Action
+7. Correlation and Mismatches
+8. Top 10 Findings
+9. Critical Mistakes
+10. Priority Remediation Plan
+11. Assumptions and Unknowns
+12. Coverage Validation Statement
+
+HTML requirements:
+- Use clean semantic HTML
+- Use headings and tables where useful
+- Use a clear severity indicator
+- Use a clear status indicator
+- Include clickable links to repository paths and line references where available
+- Include clickable links to URLs or actions observed in the HAR where available
+- For every finding include:
+  - title
+  - severity
+  - status
+  - confidence
+  - affected file or action
+  - evidence
+  - reason
+  - remediation
+
+Important:
+- The report must make it easy for the user to verify the finding themselves
+- Be direct and strict
+- If the repo coverage is incomplete, say the report is incomplete
+- If runtime evidence is incomplete, say which areas remain unknown
+- If you identify insecure production practices that should no longer be maintained by a non-developer, say so explicitly
