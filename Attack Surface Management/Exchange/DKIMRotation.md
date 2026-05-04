@@ -1,31 +1,30 @@
 ### DKIM Rollover and Configuration Change Audit (Microsoft Sentinel)
 
-This KQL query searches the Microsoft 365 Unified Audit Log (ingested into the `OfficeActivity` table) to identify when DKIM signing settings were changed or DKIM keys were rotated for Exchange Online domains.
+This KQL query analyzes the Microsoft 365 Unified Audit Log (via the `OfficeActivity` table) to identify when DKIM signing settings were changed or DKIM keys were rotated for Exchange Online domains.
 
 **What it does:**
-- Looks back **365 days** for Exchange administrative events related to DKIM.
-- Filters for DKIM operations:
-  - `Set-DkimSigningConfig` (enable/disable or configuration changes)
-  - `Rotate-DkimSigningConfig` (explicit DKIM key rollover)
-- Parses the `Parameters` array to reliably extract:
-  - The **domain** affected (`Identity`)
+- Reviews the past **365 days** of Exchange-related audit events.
+- Filters specifically for DKIM operations:
+  - `Set-DkimSigningConfig` (configuration changes such as enable/disable)
+  - `Rotate-DkimSigningConfig` (DKIM key rotation)
+- Parses the `Parameters` field to extract:
+  - The affected **domain** (`Identity`)
   - The **DKIM enabled state** (`Enabled`, `IsEnabled`, or `Enable`)
-- Groups results by time, operation, and actor to produce a clean audit trail.
+  - The **selector** used during rotation events
+- Groups results to provide a structured audit trail of DKIM-related changes.
 
 **Output fields:**
-- `TimeGenerated` — when the DKIM change occurred  
-- `Operation` — type of DKIM action performed  
-- `Domain` — domain whose DKIM configuration was modified  
-- `Enabled` — whether DKIM was enabled or disabled after the change  
-- `UserId` — account that performed the action  
-- `ClientIP` — source IP of the change  
+- `TimeGenerated` — Timestamp of the DKIM change  
+- `Operation` — Type of DKIM action performed  
+- `Domain` — Domain affected by the change  
+- `Enabled` — DKIM state after the change (enabled/disabled)  
 
 **Use cases:**
-- Audit DKIM key rollovers for compliance and security reviews
-- Investigate unauthorized or unexpected DKIM configuration changes
-- Validate operational change management for email authentication controls
+- Auditing DKIM key rotations for compliance and governance
+- Detecting unauthorized or unexpected DKIM configuration changes
+- Supporting change management validation for email authentication controls
 
-```KQL
+```kql
 let lookback = 365d;
 OfficeActivity
 | where TimeGenerated >= ago(lookback)
