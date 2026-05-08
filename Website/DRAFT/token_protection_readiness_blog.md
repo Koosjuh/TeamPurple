@@ -66,13 +66,13 @@ This means organizations need to understand:
 
 That last point is critical. 
 
-## Important Requirements and Limitations
+## Requirements and Limitations
 
-One of the biggest mistakes I see is assuming Token Protection can simply be globally enabled.
+One of the biggest mistakes you can make is assuming Token Protection can simply be globally enabled.
 
 That is not how Microsoft positions it either.
 
-At the time of writing, there are several important requirements and limitations:
+At the time of writing, there are several requirements and limitations:
 
 ### Supported Platforms
 
