@@ -1,5 +1,5 @@
 ---
-title: "Preparing for Microsoft Entra Token Protection Enforcement with Sentinel"
+title: "Preparing for Microsoft Entra Token Protection Enforcement"
 date: 2026-05-08
 hero: "/images/posts/entraid/token-protection-readiness.webp"
 description: "How to assess Microsoft Entra Token Protection readiness using Microsoft Sentinel and Conditional Access telemetry."
@@ -21,32 +21,30 @@ menu:
     weight: 10
 ---
 
-# Preparing for Microsoft Entra Token Protection Enforcement with Sentinel
+# Preparing for Microsoft Entra Token Protection Enforcement
 
 ## Making Token Replay Risk Visible
 
----
-
-One of the more interesting developments in Microsoft Entra ID over the last period is Token Protection. Most organizations already focus heavily on MFA, compliant devices and Conditional Access, but token replay remains one of those areas that is often not operationalized or even measured properly.
+Most organizations already focus heavily on MFA, compliant devices and Conditional Access, but token replay remains one of those areas that is often not operationalized or even measured properly.
 
 That creates a visibility gap.
 
-A user can successfully complete MFA, use a compliant device and still have a token replayed under certain circumstances. This is exactly where Token Protection comes in. Microsoft Entra attempts to cryptographically bind sign-in session tokens to a device so stolen tokens cannot simply be replayed elsewhere.
+A user can successfully complete MFA, use a compliant device and still have a token replayed under certain circumstances. This is where Token Protection comes into play. Microsoft Entra attempts to cryptographically bind sign-in session tokens to a device so stolen tokens cannot simply be replayed elsewhere.
 
-The important part here is not just enforcement. The real challenge is understanding whether your environment is even ready for it.
+The important part here is not just enforcement. This is all good however you should asses if your environment is even ready for it.
 
-This is where Sentinel and sign-in telemetry become extremely valuable.
+This is where Sentinel and sign-in telemetry can be used.
 
-Microsoft already exposes Token Protection telemetry in `SigninLogs`, which means organizations can start assessing readiness long before they enforce anything through Conditional Access.
+Microsoft already exposes Token Protection telemetry in `SigninLogs`, which means organizations can start assessing readiness before they enforce anything through Conditional Access, which you should still do (report-only, however we will go through everything!).
 
 Microsoft documentation:
 https://learn.microsoft.com/en-us/entra/identity/devices/protecting-tokens-microsoft-entra-id
 
-## Why This Matters
+## MFA is good, manditory even however it's not the whole picture
 
 A lot of organizations assume:
 
-- MFA solves token theft
+- MFA makes all sign ins 100% safe
 - compliant devices solve replay attacks
 - Conditional Access is enough
 
@@ -54,9 +52,9 @@ That is not entirely true.
 
 If an attacker steals a valid session token, especially from unmanaged or compromised systems, they may be able to replay that token from another location or system without needing the original MFA challenge again.
 
-Token Protection attempts to reduce this risk by binding the sign-in session to the original device state.
+Token Protection reduces this risk by binding the sign-in session to the original device state.
 
-The important nuance is that not every authentication flow currently supports this.
+**The important part here is that not every authentication flow currently supports this.**
 
 This means organizations need to understand:
 
@@ -66,7 +64,7 @@ This means organizations need to understand:
 - Whether Conditional Access policies are already evaluating Token Protection controls
 - Whether enforcement would break parts of the environment
 
-That last point is critical.
+That last point is critical. 
 
 ## Important Requirements and Limitations
 
@@ -87,7 +85,7 @@ Currently supported or partially supported:
 
 ### Supported Device States
 
-Windows devices generally need to be:
+Windows devices need to be:
 
 - Microsoft Entra Joined
 - Hybrid Microsoft Entra Joined
@@ -108,13 +106,11 @@ Currently focused on workloads like:
 
 ### Important Limitation: Browser-Based Applications
 
-This is the part many engineers miss.
-
 Microsoft explicitly states that browser-based applications are currently not supported for Token Protection enforcement.
 
 That means environments with large browser-heavy workflows may see a large amount of unbound sessions. This does not automatically mean something is insecure. It often simply means the authentication flow does not currently support token binding.
 
-This is exactly why readiness assessment matters before enforcement.
+Hence why we want to asses where Token Protection can and need to be applied.
 
 ## Making Token Protection Visible
 
@@ -165,9 +161,9 @@ Again, this does not automatically mean malicious activity. It usually means com
 
 ## Checking Whether Token Protection Is Already Evaluated
 
-The next step is checking whether Token Protection is already present inside Conditional Access policies.
+This is for Engineers/Consultants who are serving multiple customers who do not always know each CA by heart, if you are employed by an organisation are are part of internal IT, you should know this! :) And if you don't know, don't tell anyone and use this query and also go read up on your policies! ;) And now you know!
 
-Many organizations assume they are using it because they see telemetry in the logs. Those are two different things.
+The next step is checking whether Token Protection is already present inside Conditional Access policies.
 
 This query checks whether Token Protection session controls appear in Conditional Access evaluation results:
 
@@ -235,18 +231,14 @@ Microsoft’s own guidance aligns quite well with what I would operationally rec
 6. Pilot with a small controlled user group
 7. Expand gradually
 
-The biggest value is not only security improvement. It is reducing uncertainty before enforcement.
-
-A lot of Conditional Access problems happen because organizations skip the visibility phase entirely.
-
-Token Protection should absolutely be viewed as another layer in a broader defense-in-depth strategy against token theft and replay attacks, especially as attackers continue shifting toward session abuse instead of traditional password attacks.
+Token Protection should absolutely be viewed as another layer in a broader defense-in-depth strategy against token theft and replay attacks, especially as **attackers continue shifting toward session abuse** instead of traditional password attacks.
 
 For organizations already heavily invested in:
 
 - modern authentication
 - compliant devices
-- Entra Join
+- Entra Joined devices
 - Conditional Access
 - native Microsoft clients
 
-this is definitely something worth evaluating now rather than later.
+this is definitely something worth evaluating now rather than later. And would really add another layer of defense.
