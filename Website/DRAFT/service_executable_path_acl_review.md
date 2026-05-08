@@ -160,7 +160,7 @@ Example:
 ```powershell
 $FoldersToCheck = @(
     'D:\azuredevops',
-    'C:\anetlp'
+    'C:\oracle'
 )
 ```
 
