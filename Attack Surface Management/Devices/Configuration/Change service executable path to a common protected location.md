@@ -48,31 +48,86 @@ $FoldersToCheck = @(
     ''
 )
 
+$OutputFolder = Join-Path $env:USERPROFILE 'Desktop\ServiceAclAudit'
+
+if (-not (Test-Path -LiteralPath $OutputFolder)) {
+    New-Item -ItemType Directory -Path $OutputFolder | Out-Null
+}
+
+$BroadPrincipals = @(
+    'Everyone',
+    'Authenticated Users',
+    'BUILTIN\Users',
+    'Users',
+    'Domain Users'
+)
+
+$WriteRightsPattern = 'Write|Modify|FullControl|CreateFiles|CreateDirectories|AppendData|WriteData|ChangePermissions|TakeOwnership'
+
 $AclReport = foreach ($folder in $FoldersToCheck) {
+
     if (Test-Path -LiteralPath $folder) {
+
         $acl = Get-Acl -LiteralPath $folder
 
         foreach ($ace in $acl.Access) {
+
+            $identity = $ace.IdentityReference.Value
+            $rightsText = $ace.FileSystemRights.ToString()
+
+            $isBroadPrincipal = $false
+            foreach ($principal in $BroadPrincipals) {
+                if ($identity -match [regex]::Escape($principal)) {
+                    $isBroadPrincipal = $true
+                    break
+                }
+            }
+
+            $hasWriteRights = $rightsText -match $WriteRightsPattern
+
+            $riskLevel = if (
+                $ace.AccessControlType -eq 'Allow' -and
+                $isBroadPrincipal -and
+                $hasWriteRights -and
+                -not $ace.IsInherited
+            ) {
+                'High'
+            }
+            elseif (
+                $ace.AccessControlType -eq 'Allow' -and
+                $isBroadPrincipal -and
+                $hasWriteRights -and
+                $ace.IsInherited
+            ) {
+                'Medium'
+            }
+            else {
+                'None'
+            }
+
+            $riskIndicator = if (
+                $ace.AccessControlType -eq 'Allow' -and
+                $isBroadPrincipal -and
+                $hasWriteRights
+            ) {
+                'Broad principal has write-capable permissions on service base folder'
+            }
+            else {
+                ''
+            }
+
             [PSCustomObject]@{
                 ComputerName        = $env:COMPUTERNAME
                 BaseFolder          = $folder
                 Owner               = $acl.Owner
-                IdentityReference   = $ace.IdentityReference.Value
-                FileSystemRights    = $ace.FileSystemRights
+                IdentityReference   = $identity
+                FileSystemRights    = $rightsText
                 AccessControlType   = $ace.AccessControlType
                 IsInherited         = $ace.IsInherited
                 InheritanceFlags    = $ace.InheritanceFlags
                 PropagationFlags    = $ace.PropagationFlags
-                RiskIndicator       = if (
-                    $ace.AccessControlType -eq 'Allow' -and
-                    $ace.IdentityReference.Value -match 'Everyone|Authenticated Users|Users|Domain Users|BUILTIN\\Users' -and
-                    $ace.FileSystemRights -match 'Write|Modify|FullControl|CreateFiles|CreateDirectories|AppendData|WriteData'
-                ) {
-                    'Potentially risky write permission'
-                }
-                else {
-                    ''
-                }
+                RiskLevel           = $riskLevel
+                RiskIndicator       = $riskIndicator
             }
         }
     }
@@ -87,14 +142,22 @@ $AclReport = foreach ($folder in $FoldersToCheck) {
             IsInherited         = ''
             InheritanceFlags    = ''
             PropagationFlags    = ''
+            RiskLevel           = 'Unknown'
             RiskIndicator       = 'Folder not found'
         }
     }
 }
 
+$CsvPath = Join-Path $OutputFolder 'ServiceBaseFolderAclReport_Full.csv'
+
 $AclReport |
     Sort-Object BaseFolder, IdentityReference |
-    Export-Csv -Path ".\ServiceBaseFolderAclReport.csv" -NoTypeInformation -Delimiter ';' -Encoding UTF8
+    Export-Csv -Path $CsvPath -NoTypeInformation -Delimiter ';' -Encoding UTF8
+
+Write-Host ''
+Write-Host 'Complete ACL report exported to:'
+Write-Host $CsvPath
+Write-Host ''
 
 $AclReport | Format-Table -AutoSize
 ```
