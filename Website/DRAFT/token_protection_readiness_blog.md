@@ -219,7 +219,7 @@ This is:
 
 > “Understand authentication flows first, measure compatibility, then gradually move toward enforcement.”.
 
-Kind of like Attack Surface Management rules, audit first, then slowly implement. Because this is a strong enforcement, it really ramps up your defense against certain attacks however it can also break sign ins for applications that do not support it.
+Kind of like Attack Surface Reduction rules, audit first, then slowly implement. Because this is a strong enforcement, it really ramps up your defense against certain attacks however it can also break sign ins for applications that do not support it.
 
 ## Recommended Approach
 
