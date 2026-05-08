@@ -59,7 +59,7 @@ A weak service executable path can matter in several scenarios:
 - Ransomware staging or defense evasion
 - Abuse of build agents or vendor services running from writable folders
 
-This is especially relevant for servers where services run from custom folders such as:
+This is especially relevant for devices where services run from custom folders such as:
 
 - `C:\temp`
 - `D:\apps`
@@ -86,7 +86,7 @@ The workflow is straightforward:
 2. Review the affected services and extracted base folders.
 3. Copy the unique `BaseFolder` values.
 4. Paste them into the PowerShell array.
-5. Run the PowerShell script on the affected server.
+5. Run the PowerShell script on the affected device.
 6. Review `ServiceBaseFolderAclReport_Full.csv`.
 
 The KQL tells you which folders Defender is concerned about.
@@ -153,7 +153,7 @@ This is the folder we want to validate.
 
 # Step 2: Copy the unique BaseFolder values
 
-From the KQL output, copy the unique `BaseFolder` values for the affected server.
+From the KQL output, copy the unique `BaseFolder` values for the affected device.
 
 Example:
 
@@ -164,9 +164,9 @@ $FoldersToCheck = @(
 )
 ```
 
-# Step 3: Run the ACL check on the affected server
+# Step 3: Run the ACL check on the affected device
 
-Run the following PowerShell script on the affected server.
+Run the following PowerShell script on the affected device.
 
 ```powershell
 # Insert the BaseFolder values returned by the KQL query.
