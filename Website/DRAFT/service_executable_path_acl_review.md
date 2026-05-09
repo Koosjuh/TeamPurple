@@ -9,6 +9,8 @@ categories:
   - "Security Hardening"
 tags:
   - "Defender for Endpoint"
+  - "Defender Vulnerability Management"
+  - "Exposure Management"
   - "KQL"
   - "PowerShell"
   - "Service Hardening"
@@ -68,7 +70,7 @@ The folder location itself is not always the problem.
 
 The real question is:
 
-> Who can write to that folder? Because Program Files or Windows have set ACL permission lists whilest anything outside of these standard OS Folders does not. 
+> Who can write to that folder? Because Program Files or Windows have set ACL permission lists while anything outside of these standard OS Folders does not. 
 
 If a service runs from `D:\SomeApp`, and only Administrators and SYSTEM can modify that folder, the practical risk is much lower.
 
@@ -91,7 +93,7 @@ The workflow is straightforward:
 
 The KQL tells you which folders Defender is concerned about.
 
-The PowerShell tells you whether the ACLs on those folders are actually risky.
+The PowerShell collects the ACL evidence needed to determine whether those folders are writable by broad principals. You as the engineer need to make the decission if this is according to least privilege. 
 
 # Step 1: Find services outside common protected locations
 
@@ -107,17 +109,18 @@ DeviceTvmSecureConfigurationAssessment
 ) on ConfigurationId
 | where IsApplicable == 1
 | where IsCompliant == 0
-| extend ContextJson = parse_json(Context)
+| extend ContextText = tostring(Context)
+| extend Parsed = parse_json(ContextText)
 | extend
-    ServiceName = tostring(ContextJson[0]),
-    RawServicePath = tostring(ContextJson[1])
+    ServiceName = tostring(Parsed[0]),
+    RawServicePath = tostring(Parsed[1])
 | extend ServicePath = replace_string(RawServicePath, @"\""", @"""")
 | extend ServicePath = trim(@'"', ServicePath)
 | extend ServicePath = replace_regex(ServicePath, @"^\\\?\?\\", "")
 | extend ServicePath = replace_regex(ServicePath, @"^\\\\\?\\", "")
 | extend ExecutablePath = extract(@"([A-Za-z]:\\[^""]+?\.exe)", 1, ServicePath)
-| extend ExecutableDirectory = extract(@"^(.+)\\[^\\]+\.exe$", 1, ExecutablePath)
 | extend BaseFolder = extract(@"^([A-Za-z]:\\[^\\]+)", 1, ExecutablePath)
+| extend ExecutableDirectory = replace_regex(ExecutablePath, @"\\[^\\]+\.exe$", "")
 | summarize arg_max(Timestamp, *) by DeviceId, ServiceName, ExecutablePath
 | project
     DeviceName,
@@ -413,7 +416,7 @@ Read-only entries such as:
 BUILTIN\Users    ReadAndExecute
 ```
 
-are generally less concerning. Still use your best judgement and take into context the product we are reviewing, is it least priveledge? If not, can we change it? Or can we accept the risk. Also take into account that 
+are generally less concerning. Still use your best judgement and take into context the product we are reviewing, is it least privilege? If not, can we change it? Or can we accept the risk. Also take into account that 
 
 # Deployment options
 
@@ -470,7 +473,7 @@ This allows:
 - dashboards
 - trending
 - potential alerting
-- Centralized information for decission making
+- Centralized information for decision making
 
 # Important nuance
 
@@ -497,7 +500,7 @@ A custom folder with only:
 
 may be acceptable.
 
-A writable service folder is the actual concern. And this needs to be checked and verified that its least priveledge.
+A writable service folder is the actual concern. And this needs to be checked and verified that its least privilege.
 
 # Why ransomware operators care
 
@@ -534,5 +537,5 @@ So the practical workflow becomes:
 1. Find the exposed service path with KQL.
 2. Extract the data.
 3. Validate the ACLs locally or centrally.
-4. Determine whether broad principals are adhered to least priveledge.
+4. Determine whether folders are adhered to least privilege.
 5. Then decide whether remediation is needed.
