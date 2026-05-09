@@ -477,30 +477,63 @@ This allows:
 
 # Important nuance
 
-Do not blindly remediate this recommendation. Just because this recommendation is there, doesn't mean it can be exploited or that it's bad, but it deserves review!
+Do not blindly remediate this recommendation. The presence of this finding does not automatically mean something is exploitable or insecure, but it does warrant review.
 
-Some environments intentionally run services from:
+Many environments intentionally run services from locations outside standard protected operating system folders. Common examples include:
 
 - build agents
 - deployment frameworks
-- middleware stacks
-- legacy applications (Which can be an accepted risk)
-- vendor software
+- middleware platforms
+- legacy applications
+- vendor-managed software
+- Azure VM extension paths
 
-The important thing is not only the folder path itself.
+The folder location itself is not necessarily the problem.
 
-The real issue is usually:
+The real question is:
 
 > Can broad principals modify the folder contents?
 
-A custom folder with only:
+If a custom service folder is writable only by principals such as:
 
 - SYSTEM
+- TrustedInstaller
 - Administrators
 
-may be acceptable.
+the practical risk may be limited or acceptable depending on the environment and operational requirements.
 
-A writable service folder is the actual concern. And this needs to be checked and verified that its least privilege.
+The actual concern is when broad principals such as:
+
+- Authenticated Users
+- BUILTIN\Users
+- Domain Users
+- Everyone
+
+have write-capable permissions on directories used by (privileged) services.
+
+One thing you will likely notice quickly when running this KQL in enterprise environments is the large number of findings related to:
+
+```text
+C:\Packages\Plugins\
+```
+
+This is especially common on Azure virtual machines running components such as:
+
+- Microsoft Defender for SQL
+- Azure Automation Hybrid Workers
+- monitoring agents
+- backup agents
+- Azure VM extensions
+
+These directories are commonly used by Microsoft-managed extension frameworks and are therefore not automatically insecure simply because they exist outside C:\Program Files.
+
+The same validation principle still applies however:
+
+Do not trust the folder location alone. Validate the ACLs.
+
+In many environments these folders are still properly protected and writable only by privileged principals. In those cases, the finding may represent an accepted or low practical risk.
+
+This recommendation should therefore be treated as a signal for review and validation, not as proof of exploitation or immediate misconfiguration.
 
 # Why ransomware operators care
 
