@@ -38,11 +38,11 @@ LatestDeviceInfo
 | extend SupportState =
     case(
         isnull(EndOfLifeDate), "Unknown",
-        EndOfLifeDate < now(), "End of Life",
-        EndOfLifeDate <= datetime_add("year", 1, now()), "Approaching End of Life",
+        EndOfLifeDate < now(), "EOS",
+        EndOfLifeDate <= datetime_add("year", 1, now()), "Near EOS",
         "Supported"
     )
-| where SupportState in ("End of Life", "Approaching End of Life") // Remove this line to include supported operating systems in the report.
+| where SupportState in ("EOS", "Near EOS") // Remove this line to include supported operating systems in the report.
 | summarize
     TotalDevices = dcount(DeviceId),
     NotOnboarded = dcountif(DeviceId, OnboardingBucket == "NotOnboarded"),
