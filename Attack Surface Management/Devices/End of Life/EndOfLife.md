@@ -37,12 +37,12 @@ LatestDeviceInfo
 | where RefType == DeviceType
 | extend SupportState =
     case(
-        isnull(EndOfLifeDate), "Unknown (no CSV match)",
-        EndOfLifeDate < now(), "OutOfSupport",
-        EndOfLifeDate <= datetime_add("year", 1, now()), "EndingWithin1Year",
+        isnull(EndOfLifeDate), "Unknown",
+        EndOfLifeDate < now(), "End of Life",
+        EndOfLifeDate <= datetime_add("year", 1, now()), "Approaching End of Life",
         "Supported"
     )
-| where SupportState in ("OutOfSupport", "EndingWithin1Year")
+| where SupportState in ("End of Life", "Approaching End of Life") // Remove this line to include supported operating systems in the report.
 | summarize
     TotalDevices = dcount(DeviceId),
     NotOnboarded = dcountif(DeviceId, OnboardingBucket == "NotOnboarded"),
@@ -65,17 +65,17 @@ LatestDeviceInfo
 by OSName, Version=BaseBuild, SupportState, EndOfLifeDate
 | extend CountCheck = TotalDevices - (NotOnboarded + Onboarded + OtherOrUnknown)
 | project
-    OSName,
-    Version,
-    SupportState,
-    EndOfLifeDate = format_datetime(EndOfLifeDate, "yyyy-MM-dd"),
-    TotalDevices,
-    NotOnboarded,
-    Onboarded,
-    OtherOrUnknown,
-    CountCheck,
-    DeviceInfoOSPlatforms,
-    RawOnboardingStates,
-    VersionDistribution
-| order by SupportState asc, EndOfLifeDate asc, TotalDevices desc
+    ["Operating System"] = OSName,
+    ["Version"] = Version,
+    ["Support State"] = SupportState,
+    ["End of Support Date"] = format_datetime(EndOfLifeDate, "yyyy-MM-dd"),
+    ["Total Devices"] = TotalDevices,
+    ["Not Onboarded Devices"] = NotOnboarded,
+    ["Onboarded Devices"] = Onboarded,
+    ["Other / Unknown Onboarding"] = OtherOrUnknown,
+    ["Count Check"] = CountCheck,
+    ["Reported OS Platforms"] = DeviceInfoOSPlatforms,
+    ["Raw Onboarding States"] = RawOnboardingStates,
+    ["Version Distribution"] = VersionDistribution
+| order by ["Support State"] asc, ["End of Support Date"] asc, ["Total Devices"] desc
 ```
