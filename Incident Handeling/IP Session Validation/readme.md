@@ -1,5 +1,11 @@
 # IP validation tool
 
+## Updates
+
+| Date       | Update                                                                                                                                                      |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-17 | Added AzureSpeed integration to enrich Microsoft Infrastructure IP addresses with Azure Service Tag, Region, Address Prefix and System Service information. |
+
 ## Session validation
 
 ---
@@ -984,6 +990,90 @@ First observed timestamp for VPN/proxy detection from ProxyCheck. Indicates when
 **Last seen**
 
 Most recent timestamp ProxyCheck observed the IP as VPN/proxy infrastructure. Useful to determine whether the detection is recent or stale. However I am debating if I should keep this because we are investigating an active incident thus the last seen for the analyst would of course be "now" however it can give additional context if the last seen is not recent. 
+
+## Azure Service Tag Enrichment
+
+When an IP address is identified as Microsoft-owned infrastructure, the tool automatically performs an Azure Service Tag lookup using AzureSpeed.
+
+This enrichment provides additional Azure-specific context that is normally unavailable from traditional reputation services.
+
+### Additional Fields
+
+| Field            | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| Service Tag      | Azure service identifier associated with the IP range   |
+| Address Prefix   | Azure subnet containing the IP                          |
+| Region           | Azure region where the range is registered              |
+| Region ID        | Internal Azure region identifier                        |
+| System Service   | Azure service associated with the range                 |
+| Network Features | Azure networking capabilities associated with the range |
+
+### Why This Matters
+
+Many Microsoft sign-ins originate from Azure infrastructure.
+
+Without Azure Service Tag validation, analysts may only see:
+
+* Microsoft Corporation
+* Microsoft Azure
+* Datacenter
+
+This provides limited context.
+
+With Azure Service Tag enrichment, analysts can determine whether an IP belongs to:
+
+* AzureActiveDirectory
+* AzureFrontDoor
+* AzureMonitor
+* AzureTrafficManager
+* AzureCloud
+* Storage
+* Sql
+* Microsoft Defender related services
+* Other Azure platform services
+
+This can significantly reduce false positives during sign-in investigations and help validate whether an IP is likely part of legitimate Microsoft infrastructure.
+
+### Example
+
+##### [Microsoft Infrastructure] 20.x.x.x
+
+* ISP: Microsoft Corporation
+* Location: Dublin, Ireland
+* [AzureSpeed] Service Tag: AzureActiveDirectory
+* [AzureSpeed] Region: northeurope
+* [AzureSpeed] Address Prefix: 20.x.x.x/28
+
+Interpretation:
+
+This IP belongs to Microsoft Entra ID infrastructure operating from the North Europe Azure region. Authentication activity originating from this address is generally expected Microsoft service traffic rather than a customer-hosted Azure virtual machine.
+
+### Analyst Guidance
+
+The presence of a Microsoft Infrastructure label alone should not be considered sufficient validation.
+
+Always review:
+
+* Azure Service Tag
+* Authentication result
+* MFA status
+* Device state
+* User behavior
+* Historical sign-in patterns
+
+Examples:
+
+| Service Tag          | Typical Interpretation                    |
+| -------------------- | ----------------------------------------- |
+| AzureActiveDirectory | Microsoft Entra ID service infrastructure |
+| AzureFrontDoor       | Microsoft reverse proxy / CDN             |
+| AzureMonitor         | Monitoring and telemetry infrastructure   |
+| AzureCloud           | Generic Azure workload space              |
+| Storage              | Azure Storage services                    |
+| Sql                  | Azure SQL services                        |
+
+A result of AzureCloud generally indicates generic Azure-hosted infrastructure and should be treated similarly to other cloud-hosted workloads until additional context is available.
+
 
 **AbuseIPDB confidence**
 
