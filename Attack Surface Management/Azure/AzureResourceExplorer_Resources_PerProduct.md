@@ -79,6 +79,14 @@ Azure Resource Graph Explorer provides a live view of all Azure Resource Manager
 
 ##### Access methods:
 
-Navigate to the Azure Portal. https://portal.azure.com
-Access **Resource Manager**
-Under **Tools** you will find **Azure Resource Graph Explorer**
+1. Navigate to the Azure Portal. https://portal.azure.com
+2. Access **Resource Manager**
+3. Under **Tools** you will find **Azure Resource Graph Explorer** and here you can use the KQL
+
+### Output
+| Subscription Name | Defender for Cloud Workload | Resource Inventory |
+|-------------------|-----------------------------|-------------------|
+| Azure subscription 1 | Azure API Protect | 1 API Connection |
+| Azure subscription 1 | Azure App Service Protect | 1 Logic App |
+| Azure subscription 1 | Azure Landing Zone Protect | 1 Action Group, 2 Data Collection Rules, 1 Log Analytics Workspace |
+| Azure subscription 1 | Miscellaneous Resources | 3 Other Resources |
