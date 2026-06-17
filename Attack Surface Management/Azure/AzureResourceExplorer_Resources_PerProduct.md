@@ -58,14 +58,14 @@ Resources
 
 This query analyzes all Azure resources within the selected subscriptions and groups them into security workload categories that align with Microsoft Defender for Cloud plans, such as:
 
-Azure Landing Zone Protect
-Server Protect Azure
-Azure App Service Protect
-Azure Database Protect
-Azure Kubernetes Protect
-Azure API Protect
-External Attack Surface Management (EASM)
-Miscellaneous Resources
+- Azure Landing Zone Protect
+- Server Protect Azure
+- Azure App Service Protect
+- Azure Database Protect
+- Azure Kubernetes Protect
+- Azure API Protect
+- External Attack Surface Management (EASM)
+- Miscellaneous Resources
 
 For each subscription, the query provides a summarized inventory of protected resource types and their counts. 
 
