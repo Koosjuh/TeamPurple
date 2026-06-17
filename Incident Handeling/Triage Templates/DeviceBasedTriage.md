@@ -4,13 +4,17 @@
 #####
 - [File]
   - [Location] 
-  - [DeviceFileEvents] 
-  - [DeviceProcessEvents] 
+  - [DeviceFileEvents]
+      - []
+  - [DeviceProcessEvents]
+      - []
   - [DeviceEvents]
   - [SHA256] 
-    - [DeviceFileEvents] 
-    - [DeviceProcessEvents] 
-    - [DeviceEvents
+    - [DeviceFileEvents]
+      - []
+    - [DeviceProcessEvents]
+      - []
+    - [DeviceEvents]
   - [VirusTotal]
 ```
 
