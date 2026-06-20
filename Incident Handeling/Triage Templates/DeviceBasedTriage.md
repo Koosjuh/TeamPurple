@@ -2,19 +2,21 @@
 
 ```text
 #####
-- [File]
+**- [File]  **
   - [Location] 
   - [DeviceFileEvents]
       - []
   - [DeviceProcessEvents]
       - []
   - [DeviceEvents]
-  - [SHA256] 
+      - []
+  **- [SHA256] **
     - [DeviceFileEvents]
       - []
     - [DeviceProcessEvents]
       - []
     - [DeviceEvents]
+      - []
   - [VirusTotal]
 ```
 
