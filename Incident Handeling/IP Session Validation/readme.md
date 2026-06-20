@@ -123,6 +123,9 @@ function Get-ScamSpurTriage {
         [string]$BaseUrl = "https://api12.scamalytics.com/v3",
 
         [Parameter(Mandatory = $false)]
+        [string]$AzureIpLookupUrl = "https://www.azurespeed.com/api/ipAddress",
+
+        [Parameter(Mandatory = $false)]
         [string]$VaultName = "SecretVault",
 
         [Parameter(Mandatory = $false)]
@@ -151,13 +154,10 @@ function Get-ScamSpurTriage {
         param(
             [Parameter(Mandatory = $true)]
             [scriptblock]$ScriptBlock,
-
             [Parameter(Mandatory = $true)]
             [string]$OperationName,
-
             [Parameter(Mandatory = $false)]
             [int]$Retries = 3,
-
             [Parameter(Mandatory = $false)]
             [int]$InitialDelaySeconds = 2
         )
@@ -171,10 +171,7 @@ function Get-ScamSpurTriage {
             }
             catch {
                 $attempt++
-
-                if ($attempt -ge $Retries) {
-                    throw
-                }
+                if ($attempt -ge $Retries) { throw }
 
                 Write-Verbose "$OperationName failed on attempt $attempt. Retrying in $delay second(s)."
                 Start-Sleep -Seconds $delay
@@ -184,10 +181,7 @@ function Get-ScamSpurTriage {
     }
 
     function Test-ValidIpAddress {
-        param(
-            [Parameter(Mandatory = $true)]
-            [string]$InputIp
-        )
+        param([Parameter(Mandatory = $true)][string]$InputIp)
 
         $nullIp = $null
         return [System.Net.IPAddress]::TryParse($InputIp, [ref]$nullIp)
@@ -195,11 +189,8 @@ function Get-ScamSpurTriage {
 
     function Add-UniqueItem {
         param(
-            [Parameter(Mandatory = $true)]
-            $List,
-
-            [Parameter(Mandatory = $true)]
-            [string]$Value
+            [Parameter(Mandatory = $true)]$List,
+            [Parameter(Mandatory = $true)][string]$Value
         )
 
         if ($null -ne $List -and -not [string]::IsNullOrWhiteSpace($Value) -and -not $List.Contains($Value)) {
@@ -207,22 +198,25 @@ function Get-ScamSpurTriage {
         }
     }
 
-    function Get-FirstNonEmptyValue {
+    function Remove-ListItem {
         param(
-            [Parameter(Mandatory = $false)]
-            [object[]]$Values
+            [Parameter(Mandatory = $true)]$List,
+            [Parameter(Mandatory = $true)][string]$Value
         )
 
+        while ($List.Contains($Value)) {
+            [void]$List.Remove($Value)
+        }
+    }
+
+    function Get-FirstNonEmptyValue {
+        param([Parameter(Mandatory = $false)][object[]]$Values)
+
         foreach ($value in $Values) {
-            if ($null -eq $value) {
-                continue
-            }
+            if ($null -eq $value) { continue }
 
             $text = ([string]$value).Trim()
-
-            if ([string]::IsNullOrWhiteSpace($text)) {
-                continue
-            }
+            if ([string]::IsNullOrWhiteSpace($text)) { continue }
 
             $normalized = $text.ToLowerInvariant()
 
@@ -248,14 +242,9 @@ function Get-ScamSpurTriage {
 
     function Join-LocationParts {
         param(
-            [Parameter(Mandatory = $false)]
-            [string]$City,
-
-            [Parameter(Mandatory = $false)]
-            [string]$Region,
-
-            [Parameter(Mandatory = $false)]
-            [string]$Country
+            [Parameter(Mandatory = $false)][string]$City,
+            [Parameter(Mandatory = $false)][string]$Region,
+            [Parameter(Mandatory = $false)][string]$Country
         )
 
         $parts = New-Object 'System.Collections.Generic.List[string]'
@@ -280,10 +269,7 @@ function Get-ScamSpurTriage {
     }
 
     function Convert-AbuseIPDBCategory {
-        param(
-            [Parameter(Mandatory = $true)]
-            [int]$CategoryId
-        )
+        param([Parameter(Mandatory = $true)][int]$CategoryId)
 
         $map = @{
             3  = "Fraud Orders"
@@ -314,6 +300,20 @@ function Get-ScamSpurTriage {
         }
 
         return "Category $CategoryId"
+    }
+
+    function Get-AzureIpLookup {
+        param(
+            [Parameter(Mandatory = $true)][string]$Ip,
+            [Parameter(Mandatory = $true)][string]$LookupUrl
+        )
+
+        $encodedIp = [System.Uri]::EscapeDataString($Ip)
+        $url = "${LookupUrl}?ipOrDomain=${encodedIp}"
+
+        return Invoke-WithRetry -OperationName "Azure IP lookup for ${Ip}" -Retries $MaxRetries -InitialDelaySeconds $InitialRetryDelaySeconds -ScriptBlock {
+            Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop
+        }
     }
 
     try {
@@ -361,6 +361,9 @@ function Get-ScamSpurTriage {
         $abuseUsageType = $null
         $abuseDomain = $null
         $abuseWhitelisted = $null
+
+        $azureLookup = $null
+        $azureResults = @()
 
         $labels = New-Object 'System.Collections.Generic.List[string]'
         $subTypes = New-Object 'System.Collections.Generic.List[string]'
@@ -425,21 +428,10 @@ function Get-ScamSpurTriage {
                     $ipinfo.isp
                 )
 
-                if ($scam.scamalytics_proxy.is_datacenter -eq $true) {
-                    Add-UniqueItem $labels "Datacenter"
-                }
-
-                if ($scam.scamalytics_proxy.is_vpn -eq $true) {
-                    Add-UniqueItem $labels "VPN"
-                }
-
-                if ($scam.scamalytics_proxy.is_google -eq $true) {
-                    Add-UniqueItem $labels "Google Infrastructure"
-                }
-
-                if ($scam.scamalytics_proxy.is_amazon_aws -eq $true) {
-                    Add-UniqueItem $labels "AWS"
-                }
+                if ($scam.scamalytics_proxy.is_datacenter -eq $true) { Add-UniqueItem $labels "Datacenter" }
+                if ($scam.scamalytics_proxy.is_vpn -eq $true) { Add-UniqueItem $labels "VPN" }
+                if ($scam.scamalytics_proxy.is_google -eq $true) { Add-UniqueItem $labels "Google Infrastructure" }
+                if ($scam.scamalytics_proxy.is_amazon_aws -eq $true) { Add-UniqueItem $labels "AWS" }
 
                 if (
                     ([string]$scam.scamalytics_isp -match "Microsoft") -or
@@ -449,25 +441,11 @@ function Get-ScamSpurTriage {
                     Add-UniqueItem $labels "Microsoft Infrastructure"
                 }
 
-                if ($scam.scamalytics_proxy.is_apple_icloud_private_relay -eq $true) {
-                    Add-UniqueItem $labels "Apple iCloud Relay"
-                }
-
-                if ($ext.x4bnet.is_tor -eq $true) {
-                    Add-UniqueItem $labels "TOR"
-                }
-
-                if ($ext.x4bnet.is_vpn -eq $true) {
-                    Add-UniqueItem $labels "VPN"
-                }
-
-                if ($ext.x4bnet.is_datacenter -eq $true) {
-                    Add-UniqueItem $labels "Datacenter"
-                }
-
-                if ($ext.firehol.is_proxy -eq $true) {
-                    Add-UniqueItem $labels "Proxy"
-                }
+                if ($scam.scamalytics_proxy.is_apple_icloud_private_relay -eq $true) { Add-UniqueItem $labels "Apple iCloud Relay" }
+                if ($ext.x4bnet.is_tor -eq $true) { Add-UniqueItem $labels "TOR" }
+                if ($ext.x4bnet.is_vpn -eq $true) { Add-UniqueItem $labels "VPN" }
+                if ($ext.x4bnet.is_datacenter -eq $true) { Add-UniqueItem $labels "Datacenter" }
+                if ($ext.firehol.is_proxy -eq $true) { Add-UniqueItem $labels "Proxy" }
 
                 if ($ext.firehol.ip_blacklisted_30 -eq $true -or $ext.firehol.ip_blacklisted_1day -eq $true) {
                     Add-UniqueItem $labels "Blacklist: Firehol"
@@ -494,14 +472,8 @@ function Get-ScamSpurTriage {
                         "VPN" { Add-UniqueItem $labels "VPN" }
                         "TOR" { Add-UniqueItem $labels "TOR" }
                         "DCH" { Add-UniqueItem $labels "Datacenter" }
-                        "PUB" {
-                            Add-UniqueItem $labels "Proxy"
-                            Add-UniqueItem $subTypes "Public Proxy"
-                        }
-                        "WEB" {
-                            Add-UniqueItem $labels "Proxy"
-                            Add-UniqueItem $subTypes "Web Proxy"
-                        }
+                        "PUB" { Add-UniqueItem $labels "Proxy"; Add-UniqueItem $subTypes "Public Proxy" }
+                        "WEB" { Add-UniqueItem $labels "Proxy"; Add-UniqueItem $subTypes "Web Proxy" }
                         "SES" { Add-UniqueItem $labels "Search Engine Robot" }
                         "RES" { Add-UniqueItem $subTypes "Residential" }
                         "MOB" { Add-UniqueItem $subTypes "Mobile" }
@@ -517,14 +489,8 @@ function Get-ScamSpurTriage {
                         "VPN" { Add-UniqueItem $labels "VPN" }
                         "TOR" { Add-UniqueItem $labels "TOR" }
                         "DCH" { Add-UniqueItem $labels "Datacenter" }
-                        "PUB" {
-                            Add-UniqueItem $labels "Proxy"
-                            Add-UniqueItem $subTypes "Public Proxy"
-                        }
-                        "WEB" {
-                            Add-UniqueItem $labels "Proxy"
-                            Add-UniqueItem $subTypes "Web Proxy"
-                        }
+                        "PUB" { Add-UniqueItem $labels "Proxy"; Add-UniqueItem $subTypes "Public Proxy" }
+                        "WEB" { Add-UniqueItem $labels "Proxy"; Add-UniqueItem $subTypes "Web Proxy" }
                         "SES" { Add-UniqueItem $labels "Search Engine Robot" }
                     }
                 }
@@ -570,25 +536,11 @@ function Get-ScamSpurTriage {
                             $lastSeen = [string]$pcData.detections.last_seen
                         }
 
-                        if ($pcVpn -eq $true) {
-                            Add-UniqueItem $labels "VPN"
-                        }
-
-                        if ($pcProxy -eq $true) {
-                            Add-UniqueItem $labels "Proxy"
-                        }
-
-                        if ($pcTor -eq $true) {
-                            Add-UniqueItem $labels "TOR"
-                        }
-
-                        if ($pcHosting -eq $true) {
-                            Add-UniqueItem $labels "Datacenter"
-                        }
-
-                        if ($pcAnonymous -eq $true) {
-                            Add-UniqueItem $subTypes "Anonymous"
-                        }
+                        if ($pcVpn -eq $true) { Add-UniqueItem $labels "VPN" }
+                        if ($pcProxy -eq $true) { Add-UniqueItem $labels "Proxy" }
+                        if ($pcTor -eq $true) { Add-UniqueItem $labels "TOR" }
+                        if ($pcHosting -eq $true) { Add-UniqueItem $labels "Datacenter" }
+                        if ($pcAnonymous -eq $true) { Add-UniqueItem $subTypes "Anonymous" }
                     }
 
                     $mainOperator = $null
@@ -619,18 +571,10 @@ function Get-ScamSpurTriage {
                     }
 
                     if (-not [string]::IsNullOrWhiteSpace($provider) -and $pcData.detections.vpn -eq $true) {
-                        while ($labels.Contains("VPN")) {
-                            [void]$labels.Remove("VPN")
-                        }
+                        Remove-ListItem $labels "VPN"
                         Add-UniqueItem $labels "VPN: $provider"
                     }
                 }
-                else {
-                    Write-Verbose "ProxyCheck returned status ok, but no IP result block was found for ${ip}"
-                }
-            }
-            else {
-                Write-Verbose "ProxyCheck status was $($pcResp.status)"
             }
         }
         catch {
@@ -665,15 +609,9 @@ function Get-ScamSpurTriage {
 
                 if (-not [string]::IsNullOrWhiteSpace([string]$abuse.usageType)) {
                     switch -Regex ([string]$abuse.usageType) {
-                        "Data Center|Web Hosting|Transit" {
-                            Add-UniqueItem $labels "Datacenter"
-                        }
-                        "Search Engine Spider" {
-                            Add-UniqueItem $labels "Search Engine Robot"
-                        }
-                        "Content Delivery Network" {
-                            Add-UniqueItem $subTypes "CDN"
-                        }
+                        "Data Center|Web Hosting|Transit" { Add-UniqueItem $labels "Datacenter" }
+                        "Search Engine Spider" { Add-UniqueItem $labels "Search Engine Robot" }
+                        "Content Delivery Network" { Add-UniqueItem $subTypes "CDN" }
                     }
                 }
 
@@ -692,6 +630,34 @@ function Get-ScamSpurTriage {
         }
         catch {
             Write-Verbose "AbuseIPDB failed for ${ip}. $($_.Exception.Message)"
+        }
+
+        if ($labels.Contains("Microsoft Infrastructure")) {
+            try {
+                Write-Verbose "Requesting Azure IP Lookup for Microsoft infrastructure IP ${ip}"
+
+                $azureLookup = Get-AzureIpLookup -Ip $ip -LookupUrl $AzureIpLookupUrl
+
+                if ($azureLookup -is [string]) {
+                    $azureLookup = $azureLookup | ConvertFrom-Json -ErrorAction Stop
+                }
+
+                if ($null -ne $azureLookup) {
+                    if ($azureLookup -is [System.Array]) {
+                        $azureResults = @($azureLookup)
+                    }
+                    else {
+                        $azureResults = @($azureLookup)
+                    }
+
+                    if ($azureResults.Count -gt 0) {
+                        Add-UniqueItem $labels "Azure Service Tag"
+                    }
+                }
+            }
+            catch {
+                Write-Verbose "Azure IP Lookup failed for ${ip}. $($_.Exception.Message)"
+            }
         }
 
         if ([string]::IsNullOrWhiteSpace($location)) {
@@ -752,6 +718,41 @@ function Get-ScamSpurTriage {
 
         if (-not [string]::IsNullOrWhiteSpace($isp)) {
             Write-Output "- ISP: $isp"
+        }
+
+        if ($azureResults.Count -gt 0) {
+            foreach ($azureResult in $azureResults) {
+                $azureServiceTagId = Get-FirstNonEmptyValue @($azureResult.serviceTagId)
+                $azurePrefix = Get-FirstNonEmptyValue @($azureResult.ipAddressPrefix)
+                $azureRegion = Get-FirstNonEmptyValue @($azureResult.region)
+                $azureRegionId = Get-FirstNonEmptyValue @($azureResult.regionId)
+                $azureSystemService = Get-FirstNonEmptyValue @($azureResult.systemService)
+                $azureNetworkFeatures = Get-FirstNonEmptyValue @($azureResult.networkFeatures)
+
+                if (-not [string]::IsNullOrWhiteSpace($azureServiceTagId)) {
+                    Write-Output "- [AzureSpeed] Service tag: $azureServiceTagId"
+                }
+
+                if (-not [string]::IsNullOrWhiteSpace($azurePrefix)) {
+                    Write-Output "- [AzureSpeed] Address prefix: $azurePrefix"
+                }
+
+                if (-not [string]::IsNullOrWhiteSpace($azureRegion)) {
+                    Write-Output "- [AzureSpeed] Region: $azureRegion"
+                }
+
+                if (-not [string]::IsNullOrWhiteSpace($azureRegionId)) {
+                    Write-Output "- [AzureSpeed] Region ID: $azureRegionId"
+                }
+
+                if (-not [string]::IsNullOrWhiteSpace($azureSystemService)) {
+                    Write-Output "- [AzureSpeed] System service: $azureSystemService"
+                }
+
+                if (-not [string]::IsNullOrWhiteSpace($azureNetworkFeatures)) {
+                    Write-Output "- [AzureSpeed] Network features: $azureNetworkFeatures"
+                }
+            }
         }
 
         $scamalyticsConnectionType = Get-FirstNonEmptyValue @(
