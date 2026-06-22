@@ -1,3 +1,4 @@
+Per Product + Other
 ```kql
 Resources
 | extend ResourceType = tolower(type)
@@ -53,6 +54,44 @@ Resources
 | project SubscriptionName, subscriptionId, ProtectBucket, ResourceSummary
 | order by SubscriptionName asc, ProtectBucket asc
 ```
+
+OTHER
+
+```kql
+Resources
+| extend ResourceType = tolower(type)
+| where ResourceType !in (
+    "microsoft.hybridcompute/machines",
+    "microsoft.compute/virtualmachines",
+    "microsoft.storage/storageaccounts",
+    "microsoft.keyvault/vaults",
+    "microsoft.operationalinsights/workspaces",
+    "microsoft.insights/datacollectionrules",
+    "microsoft.insights/actiongroups",
+    "microsoft.network/virtualnetworks",
+    "microsoft.network/networksecuritygroups",
+    "microsoft.web/sites",
+    "microsoft.web/serverfarms",
+    "microsoft.web/certificates",
+    "microsoft.sql/servers",
+    "microsoft.sql/servers/databases",
+    "microsoft.dbformysql/flexibleservers",
+    "microsoft.dbforpostgresql/flexibleservers",
+    "microsoft.documentdb/databaseaccounts",
+    "microsoft.cache/redis",
+    "microsoft.containerservice/managedclusters",
+    "microsoft.kubernetes/connectedclusters",
+    "microsoft.containerregistry/registries",
+    "microsoft.apimanagement/service",
+    "microsoft.logic/workflows",
+    "microsoft.web/connections",
+    "microsoft.security/securityconnectors",
+    "microsoft.security/assessments"
+)
+| summarize Count=count() by subscriptionId, ResourceType
+| order by subscriptionId asc, Count desc
+```
+
 
 ### Resource Inventory by Defender for Cloud Workload
 
