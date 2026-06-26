@@ -1,14 +1,16 @@
-const tenantNameInput = document.getElementById("tenantName");
+const tenantLabelInput = document.getElementById("tenantLabel");
 const tenantIdInput = document.getElementById("tenantId");
-const saveButton = document.getElementById("save");
+
+const setActiveButton = document.getElementById("setActive");
+const clearActiveButton = document.getElementById("clearActive");
 const applyButton = document.getElementById("apply");
 
 const hostnameElement = document.getElementById("hostname");
 const statusElement = document.getElementById("status");
-const configuredTidElement = document.getElementById("configuredTid");
+const activeTidElement = document.getElementById("activeTid");
 const currentTidElement = document.getElementById("currentTid");
 
-function normalizeTenantId(value) {
+function clean(value) {
   return String(value || "").trim();
 }
 
@@ -21,25 +23,20 @@ function setStatus(state, text) {
   statusElement.textContent = text;
 }
 
-async function loadConfig() {
-  const { tenantId, tenantName } = await chrome.storage.sync.get([
-    "tenantId",
-    "tenantName"
-  ]);
-
-  tenantIdInput.value = tenantId || "";
-  tenantNameInput.value = tenantName || "";
-}
-
-async function refreshStatus() {
+function refreshStatus() {
   chrome.runtime.sendMessage({ action: "getStatus" }, response => {
     if (!response) {
       setStatus("gray", "Unable to read current tab");
       return;
     }
 
+    const activeTenant = response.activeTenant;
+
+    tenantLabelInput.value = activeTenant?.tenantLabel || "";
+    tenantIdInput.value = activeTenant?.tenantId || "";
+
     hostnameElement.textContent = response.hostname || "-";
-    configuredTidElement.textContent = response.tenantId || "-";
+    activeTidElement.textContent = activeTenant?.tenantId || "-";
     currentTidElement.textContent = response.currentTid || "-";
 
     if (response.state === "green") {
@@ -55,13 +52,13 @@ async function refreshStatus() {
     }
 
     setStatus("gray", response.reason || "Not active");
-    applyButton.disabled = !response.supported || !response.tenantId;
+    applyButton.disabled = !response.supported || !activeTenant?.tenantId;
   });
 }
 
-saveButton.addEventListener("click", async () => {
-  const tenantId = normalizeTenantId(tenantIdInput.value);
-  const tenantName = tenantNameInput.value.trim();
+setActiveButton.addEventListener("click", () => {
+  const tenantId = clean(tenantIdInput.value);
+  const tenantLabel = clean(tenantLabelInput.value);
 
   if (!tenantId) {
     setStatus("gray", "Tenant ID is required");
@@ -73,15 +70,34 @@ saveButton.addEventListener("click", async () => {
     return;
   }
 
-  await chrome.storage.sync.set({
+  chrome.runtime.sendMessage({
+    action: "setActiveTenant",
     tenantId,
-    tenantName
-  });
+    tenantLabel
+  }, response => {
+    if (!response?.success) {
+      setStatus("red", "Could not set active tenant");
+      return;
+    }
 
-  await refreshStatus();
+    refreshStatus();
+  });
 });
 
-applyButton.addEventListener("click", async () => {
+clearActiveButton.addEventListener("click", () => {
+  chrome.runtime.sendMessage({ action: "clearActiveTenant" }, response => {
+    if (!response?.success) {
+      setStatus("red", "Could not clear active tenant");
+      return;
+    }
+
+    tenantLabelInput.value = "";
+    tenantIdInput.value = "";
+    refreshStatus();
+  });
+});
+
+applyButton.addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "applyTid" }, response => {
     if (!response?.success) {
       setStatus("red", response?.reason || "Could not switch tenant");
@@ -93,4 +109,4 @@ applyButton.addEventListener("click", async () => {
   });
 });
 
-loadConfig().then(refreshStatus);
+refreshStatus();
