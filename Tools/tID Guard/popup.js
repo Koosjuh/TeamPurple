@@ -104,7 +104,7 @@ applyButton.addEventListener("click", () => {
       return;
     }
 
-    setStatus("gray", "Switching tenant...");
+    setStatus("gray", "Switching current page to active tenant...");
     window.close();
   });
 });

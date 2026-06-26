@@ -5,7 +5,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      width: 330px;
+      width: 340px;
       padding: 14px;
       color: #222;
     }
@@ -44,6 +44,12 @@
       font-weight: bold;
     }
 
+    .danger {
+      background: #b00020;
+      color: white;
+      border: 0;
+    }
+
     .status {
       padding: 8px;
       border-radius: 6px;
@@ -78,13 +84,18 @@
   <h1>TID Guard</h1>
 
   <div>
-    <label for="tenantName">Tenant label</label>
-    <input id="tenantName" placeholder="Customer A Production">
+    <label for="tenantLabel">Active tenant label, optional</label>
+    <input id="tenantLabel" placeholder="Customer A Production">
 
-    <label for="tenantId">Tenant ID</label>
+    <label for="tenantId">Active tenant ID</label>
     <input id="tenantId" placeholder="00000000-0000-0000-0000-000000000000">
 
-    <button id="save">Save configuration</button>
+    <button id="setActive">Set active tenant for this browser session</button>
+    <button id="clearActive" class="danger">Clear active tenant</button>
+
+    <div class="small">
+      Stored locally and cleared when the browser starts or the extension is reloaded.
+    </div>
   </div>
 
   <div class="section">
@@ -94,8 +105,8 @@
     <div id="status" class="status gray">Checking...</div>
 
     <div class="small">
-      <strong>Configured TID:</strong>
-      <div id="configuredTid">-</div>
+      <strong>Active TID:</strong>
+      <div id="activeTid">-</div>
     </div>
 
     <div class="small">
@@ -103,7 +114,7 @@
       <div id="currentTid">-</div>
     </div>
 
-    <button id="apply">Switch to configured tenant</button>
+    <button id="apply">Switch current page to active tenant</button>
   </div>
 
   <script src="popup.js"></script>
