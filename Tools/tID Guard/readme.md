@@ -166,17 +166,97 @@ Firefox support is planned for a future release.
 
 ---
 
-# Roadmap
+## Installation
 
-Future ideas include:
+TID Guard is currently distributed as a source package and can be installed as an unpacked Chromium extension.
 
-* Automatic detection of additional Microsoft administration portals
-* Configurable supported domains
-* Import/export settings
-* Production tenant warnings
-* Optional keyboard shortcut for tenant switching
-* Optional notifications after switching tenants
-* Improved visual indicators
+### Supported Browsers
+
+* Brave
+* Google Chrome
+* Microsoft Edge
+
+### 1. Download the repository
+
+Clone the repository:
+
+```bash
+git clone https://github.com/<yourusername>/tid-guard.git
+```
+
+Or download the repository as a ZIP file from GitHub and extract it.
+
+The folder should contain:
+
+```text
+tid-guard/
+│
+├── manifest.json
+├── background.js
+├── popup.html
+├── popup.js
+└── icons/
+```
+
+### 2. Open the Extensions page
+
+Depending on your browser:
+
+| Browser        | URL                   |
+| -------------- | --------------------- |
+| Brave          | `brave://extensions`  |
+| Google Chrome  | `chrome://extensions` |
+| Microsoft Edge | `edge://extensions`   |
+
+### 3. Enable Developer Mode
+
+Enable **Developer mode** using the toggle in the top-right corner.
+
+### 4. Load the extension
+
+Click **Load unpacked**.
+
+Browse to the extracted **tid-guard** folder and select it.
+
+**Select the folder containing `manifest.json`, not the `icons` folder.**
+
+### 5. Pin the extension
+
+Click the Extensions icon in your browser toolbar and pin **TID Guard** for quick access.
+
+### 6. Configure an active tenant
+
+1. Open TID Guard.
+2. Optionally enter a tenant label.
+3. Paste the Microsoft Entra Tenant ID.
+4. Click **Set active tenant for this browser session**.
+
+The extension will immediately begin monitoring supported Microsoft administration portals.
+
+---
+
+## Updating
+
+After pulling a newer version from GitHub:
+
+1. Replace the existing files.
+2. Open your browser's Extensions page.
+3. Click **Reload** on TID Guard.
+
+The updated version will be loaded immediately.
+
+---
+
+## Removing
+
+To uninstall TID Guard:
+
+1. Open your browser's Extensions page.
+2. Locate **TID Guard**.
+3. Click **Remove**.
+
+No customer data or tenant information is retained after removal.
+
 
 ---
 
