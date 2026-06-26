@@ -17,6 +17,7 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.remove("activeTenant");
+  setToolbarState("gray", "TID Guard\nNo active tenant set");
 });
 
 function storageGet(key) {
@@ -79,9 +80,7 @@ function getState(rawUrl, activeTenant) {
     };
   }
 
-  const supported = isSupportedAdminUrl(url);
-
-  if (!supported) {
+  if (!isSupportedAdminUrl(url)) {
     return {
       state: "gray",
       reason: "Not a supported Microsoft admin site",
@@ -132,7 +131,7 @@ async function getActiveTenant() {
   return result.activeTenant || null;
 }
 
-async function setIcon(tabId, state) {
+function setToolbarState(state, title) {
   const iconPath = {
     green: "icons/green.png",
     red: "icons/red.png",
@@ -140,7 +139,6 @@ async function setIcon(tabId, state) {
   }[state] || "icons/gray.png";
 
   chrome.action.setIcon({
-    tabId,
     path: {
       "16": iconPath,
       "32": iconPath,
@@ -148,47 +146,57 @@ async function setIcon(tabId, state) {
       "128": iconPath
     }
   });
-}
 
-async function updateTabState(tabId, rawUrl) {
-  const activeTenant = await getActiveTenant();
-  const result = getState(rawUrl, activeTenant);
+  chrome.action.setBadgeText({
+    text: state === "green" ? "OK" : state === "red" ? "!" : "-"
+  });
 
-  await setIcon(tabId, result.state);
+  chrome.action.setBadgeBackgroundColor({
+    color: state === "green" ? "#008000" : state === "red" ? "#cc0000" : "#777777"
+  });
 
   chrome.action.setTitle({
-    tabId,
-    title: [
-      "TID Guard",
-      activeTenant?.tenantLabel ? `Active: ${activeTenant.tenantLabel}` : "Active: none",
-      activeTenant?.tenantId ? `TID: ${activeTenant.tenantId}` : null,
-      `Status: ${result.reason}`
-    ].filter(Boolean).join("\n")
+    title
   });
 }
 
-async function updateCurrentTabState() {
-  chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
-    const tab = tabs[0];
-
-    if (tab?.id && tab?.url) {
-      await updateTabState(tab.id, tab.url);
-    }
+async function updateToolbarForActiveTab() {
+  const tabs = await chrome.tabs.query({
+    active: true,
+    lastFocusedWindow: true
   });
-}
 
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
-  if (changeInfo.url) {
-    await updateTabState(tabId, changeInfo.url);
+  const tab = tabs[0];
+  const activeTenant = await getActiveTenant();
+
+  if (!tab?.url) {
+    setToolbarState("gray", "TID Guard\nNo active tab");
+    return;
   }
+
+  const result = getState(tab.url, activeTenant);
+
+  const title = [
+    "TID Guard",
+    activeTenant?.tenantLabel ? `Active: ${activeTenant.tenantLabel}` : "Active: none",
+    activeTenant?.tenantId ? `TID: ${activeTenant.tenantId}` : null,
+    `Status: ${result.reason}`,
+    result.currentTid ? `Current URL TID: ${result.currentTid}` : null
+  ].filter(Boolean).join("\n");
+
+  setToolbarState(result.state, title);
+}
+
+chrome.tabs.onUpdated.addListener(() => {
+  updateToolbarForActiveTab();
 });
 
-chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  chrome.tabs.get(tabId, async tab => {
-    if (tab?.url) {
-      await updateTabState(tabId, tab.url);
-    }
-  });
+chrome.tabs.onActivated.addListener(() => {
+  updateToolbarForActiveTab();
+});
+
+chrome.windows.onFocusChanged.addListener(() => {
+  updateToolbarForActiveTab();
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -200,7 +208,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         createdAt: new Date().toISOString()
       }
     }).then(async () => {
-      await updateCurrentTabState();
+      await updateToolbarForActiveTab();
       sendResponse({ success: true });
     });
 
@@ -209,7 +217,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "clearActiveTenant") {
     storageRemove("activeTenant").then(async () => {
-      await updateCurrentTabState();
+      await updateToolbarForActiveTab();
       sendResponse({ success: true });
     });
 
@@ -217,7 +225,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "getStatus") {
-    chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, async tabs => {
       const tab = tabs[0];
       const activeTenant = await getActiveTenant();
 
@@ -244,7 +252,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "applyTid") {
-    chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, async tabs => {
       const tab = tabs[0];
       const activeTenant = await getActiveTenant();
 
@@ -258,7 +266,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       const newUrl = setTid(tab.url, activeTenant.tenantId);
 
-      chrome.tabs.update(tab.id, { url: newUrl });
+      chrome.tabs.update(tab.id, { url: newUrl }, async () => {
+        await updateToolbarForActiveTab();
+      });
 
       sendResponse({
         success: true,
@@ -269,3 +279,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
+
+updateToolbarForActiveTab();
