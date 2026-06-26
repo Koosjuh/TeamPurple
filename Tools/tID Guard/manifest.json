@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "TID Guard",
   "version": "1.0.0",
-  "description": "Session-only tenant ID guardrail for Microsoft admin portals.",
+  "description": "Tenant ID guardrail for Microsoft admin portals.",
   "permissions": ["tabs", "storage"],
   "host_permissions": [
     "https://portal.azure.com/*",
