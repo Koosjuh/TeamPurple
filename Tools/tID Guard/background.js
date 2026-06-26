@@ -11,6 +11,24 @@ const ADMIN_HOSTS = [
   "purview.microsoft.com"
 ];
 
+function storageGet(key) {
+  return new Promise(resolve => {
+    chrome.storage.session.get(key, result => resolve(result));
+  });
+}
+
+function storageSet(value) {
+  return new Promise(resolve => {
+    chrome.storage.session.set(value, () => resolve());
+  });
+}
+
+function storageRemove(key) {
+  return new Promise(resolve => {
+    chrome.storage.session.remove(key, () => resolve());
+  });
+}
+
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -28,14 +46,8 @@ function getCurrentTid(rawUrl) {
 
 function setTid(rawUrl, tenantId) {
   const url = new URL(rawUrl);
-
-  if (!["http:", "https:"].includes(url.protocol)) {
-    return rawUrl;
-  }
-
   url.searchParams.delete("tid");
   url.searchParams.append("tid", tenantId);
-
   return url.toString();
 }
 
@@ -45,22 +57,15 @@ function getState(rawUrl, activeTenant) {
   try {
     url = new URL(rawUrl);
   } catch {
-    return {
-      state: "gray",
-      reason: "Invalid URL",
-      currentTid: null,
-      supported: false
-    };
+    return { state: "gray", reason: "Invalid URL", supported: false };
   }
 
-  const supported = isSupportedAdminUrl(url);
-
-  if (!supported) {
+  if (!isSupportedAdminUrl(url)) {
     return {
       state: "gray",
       reason: "Not a supported Microsoft admin site",
-      currentTid: null,
-      supported: false
+      supported: false,
+      currentTid: null
     };
   }
 
@@ -68,8 +73,8 @@ function getState(rawUrl, activeTenant) {
     return {
       state: "gray",
       reason: "No active tenant set",
-      currentTid: getCurrentTid(rawUrl),
-      supported: true
+      supported: true,
+      currentTid: getCurrentTid(rawUrl)
     };
   }
 
@@ -79,8 +84,8 @@ function getState(rawUrl, activeTenant) {
     return {
       state: "red",
       reason: "No tenant ID found in URL",
-      currentTid: null,
-      supported: true
+      supported: true,
+      currentTid: null
     };
   }
 
@@ -88,21 +93,21 @@ function getState(rawUrl, activeTenant) {
     return {
       state: "green",
       reason: "Correct tenant",
-      currentTid,
-      supported: true
+      supported: true,
+      currentTid
     };
   }
 
   return {
     state: "red",
     reason: "Different tenant ID found in URL",
-    currentTid,
-    supported: true
+    supported: true,
+    currentTid
   };
 }
 
 async function getActiveTenant() {
-  const result = await chrome.storage.session.get("activeTenant");
+  const result = await storageGet("activeTenant");
   return result.activeTenant || null;
 }
 
@@ -113,7 +118,7 @@ async function setIcon(tabId, state) {
     gray: "icons/gray.png"
   }[state] || "icons/gray.png";
 
-  await chrome.action.setIcon({
+  chrome.action.setIcon({
     tabId,
     path: {
       "16": iconPath,
@@ -130,23 +135,24 @@ async function updateTabState(tabId, rawUrl) {
 
   await setIcon(tabId, result.state);
 
-  const title = [
-    "TID Guard",
-    activeTenant?.tenantLabel ? `Active: ${activeTenant.tenantLabel}` : "Active: none",
-    activeTenant?.tenantId ? `TID: ${activeTenant.tenantId}` : null,
-    `Status: ${result.reason}`
-  ].filter(Boolean).join("\n");
-
-  await chrome.action.setTitle({ tabId, title });
+  chrome.action.setTitle({
+    tabId,
+    title: [
+      "TID Guard",
+      activeTenant?.tenantLabel ? `Active: ${activeTenant.tenantLabel}` : "Active: none",
+      activeTenant?.tenantId ? `TID: ${activeTenant.tenantId}` : null,
+      `Status: ${result.reason}`
+    ].filter(Boolean).join("\n")
+  });
 }
 
 async function updateCurrentTabState() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  const tab = tabs[0];
-
-  if (tab?.id && tab?.url) {
-    await updateTabState(tab.id, tab.url);
-  }
+  chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
+    const tab = tabs[0];
+    if (tab?.id && tab?.url) {
+      await updateTabState(tab.id, tab.url);
+    }
+  });
 }
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
@@ -156,16 +162,16 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
 });
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  const tab = await chrome.tabs.get(tabId);
-
-  if (tab?.url) {
-    await updateTabState(tabId, tab.url);
-  }
+  chrome.tabs.get(tabId, async tab => {
+    if (tab?.url) {
+      await updateTabState(tabId, tab.url);
+    }
+  });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "setActiveTenant") {
-    chrome.storage.session.set({
+    storageSet({
       activeTenant: {
         tenantId: message.tenantId,
         tenantLabel: message.tenantLabel || "",
@@ -180,7 +186,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "clearActiveTenant") {
-    chrome.storage.session.remove("activeTenant").then(async () => {
+    storageRemove("activeTenant").then(async () => {
       await updateCurrentTabState();
       sendResponse({ success: true });
     });
@@ -229,7 +235,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       const newUrl = setTid(tab.url, activeTenant.tenantId);
-      await chrome.tabs.update(tab.id, { url: newUrl });
+      chrome.tabs.update(tab.id, { url: newUrl });
 
       sendResponse({
         success: true,
