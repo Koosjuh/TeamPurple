@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "TID Guard",
+  "version": "1.0.0",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": [
+    "https://portal.azure.com/*",
+    "https://entra.microsoft.com/*",
+    "https://admin.microsoft.com/*",
+    "https://security.microsoft.com/*",
+    "https://compliance.microsoft.com/*",
+    "https://intune.microsoft.com/*"
+  ],
+  "action": {
+    "default_title": "TID Guard"
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "service_worker": "background.js"
+  }
+}
