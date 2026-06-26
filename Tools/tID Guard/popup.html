@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+<head>
+  <title>TID Guard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      width: 330px;
+      padding: 14px;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin: 0 0 12px 0;
+    }
+
+    .section {
+      border-top: 1px solid #ddd;
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 7px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .status {
+      padding: 8px;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    .green {
+      background: #d7f5d7;
+      color: #076b07;
+    }
+
+    .red {
+      background: #ffd8d8;
+      color: #8a0000;
+    }
+
+    .gray {
+      background: #e8e8e8;
+      color: #555;
+    }
+
+    .small {
+      font-size: 12px;
+      word-break: break-all;
+      color: #555;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>TID Guard</h1>
+
+  <div>
+    <label for="tenantName">Tenant label</label>
+    <input id="tenantName" placeholder="Customer A Production">
+
+    <label for="tenantId">Tenant ID</label>
+    <input id="tenantId" placeholder="00000000-0000-0000-0000-000000000000">
+
+    <button id="save">Save configuration</button>
+  </div>
+
+  <div class="section">
+    <strong>Current page</strong>
+    <div id="hostname" class="small">Loading...</div>
+
+    <div id="status" class="status gray">Checking...</div>
+
+    <div class="small">
+      <strong>Configured TID:</strong>
+      <div id="configuredTid">-</div>
+    </div>
+
+    <div class="small">
+      <strong>Current URL TID:</strong>
+      <div id="currentTid">-</div>
+    </div>
+
+    <button id="apply">Switch to configured tenant</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
