@@ -2,20 +2,31 @@
   "manifest_version": 3,
   "name": "TID Guard",
   "version": "1.0.0",
+  "description": "Tenant ID guardrail for Microsoft admin portals.",
   "permissions": ["tabs", "storage"],
   "host_permissions": [
     "https://portal.azure.com/*",
     "https://entra.microsoft.com/*",
     "https://admin.microsoft.com/*",
+    "https://intune.microsoft.com/*",
     "https://security.microsoft.com/*",
+    "https://defender.microsoft.com/*",
     "https://compliance.microsoft.com/*",
-    "https://intune.microsoft.com/*"
+    "https://exchange.admin.microsoft.com/*",
+    "https://endpoint.microsoft.com/*",
+    "https://purview.microsoft.com/*"
   ],
   "action": {
-    "default_title": "TID Guard"
+    "default_title": "TID Guard",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/gray.png",
+      "32": "icons/gray.png",
+      "48": "icons/gray.png",
+      "128": "icons/gray.png"
+    }
   },
   "background": {
-    "scripts": ["background.js"],
     "service_worker": "background.js"
   }
 }
