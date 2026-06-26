@@ -39,7 +39,7 @@ function setTid(rawUrl, tenantId) {
   return url.toString();
 }
 
-function getState(rawUrl, configuredTenantId) {
+function getState(rawUrl, activeTenant) {
   let url;
 
   try {
@@ -64,10 +64,10 @@ function getState(rawUrl, configuredTenantId) {
     };
   }
 
-  if (!configuredTenantId) {
+  if (!activeTenant?.tenantId) {
     return {
       state: "gray",
-      reason: "No tenant configured",
+      reason: "No active tenant set",
       currentTid: getCurrentTid(rawUrl),
       supported: true
     };
@@ -84,7 +84,7 @@ function getState(rawUrl, configuredTenantId) {
     };
   }
 
-  if (normalize(currentTid) === normalize(configuredTenantId)) {
+  if (normalize(currentTid) === normalize(activeTenant.tenantId)) {
     return {
       state: "green",
       reason: "Correct tenant",
@@ -101,8 +101,9 @@ function getState(rawUrl, configuredTenantId) {
   };
 }
 
-async function getConfig() {
-  return await chrome.storage.sync.get(["tenantId", "tenantName"]);
+async function getActiveTenant() {
+  const result = await chrome.storage.session.get("activeTenant");
+  return result.activeTenant || null;
 }
 
 async function setIcon(tabId, state) {
@@ -124,25 +125,31 @@ async function setIcon(tabId, state) {
 }
 
 async function updateTabState(tabId, rawUrl) {
-  const { tenantId, tenantName } = await getConfig();
-  const result = getState(rawUrl, tenantId);
+  const activeTenant = await getActiveTenant();
+  const result = getState(rawUrl, activeTenant);
 
   await setIcon(tabId, result.state);
 
-  const titleParts = [
+  const title = [
     "TID Guard",
-    tenantName ? `Configured: ${tenantName}` : null,
-    tenantId ? `TID: ${tenantId}` : null,
+    activeTenant?.tenantLabel ? `Active: ${activeTenant.tenantLabel}` : "Active: none",
+    activeTenant?.tenantId ? `TID: ${activeTenant.tenantId}` : null,
     `Status: ${result.reason}`
-  ].filter(Boolean);
+  ].filter(Boolean).join("\n");
 
-  await chrome.action.setTitle({
-    tabId,
-    title: titleParts.join("\n")
-  });
+  await chrome.action.setTitle({ tabId, title });
 }
 
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+async function updateCurrentTabState() {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs[0];
+
+  if (tab?.id && tab?.url) {
+    await updateTabState(tab.id, tab.url);
+  }
+}
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (changeInfo.url) {
     await updateTabState(tabId, changeInfo.url);
   }
@@ -151,33 +158,55 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const tab = await chrome.tabs.get(tabId);
 
-  if (tab.url) {
+  if (tab?.url) {
     await updateTabState(tabId, tab.url);
   }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "setActiveTenant") {
+    chrome.storage.session.set({
+      activeTenant: {
+        tenantId: message.tenantId,
+        tenantLabel: message.tenantLabel || "",
+        createdAt: new Date().toISOString()
+      }
+    }).then(async () => {
+      await updateCurrentTabState();
+      sendResponse({ success: true });
+    });
+
+    return true;
+  }
+
+  if (message.action === "clearActiveTenant") {
+    chrome.storage.session.remove("activeTenant").then(async () => {
+      await updateCurrentTabState();
+      sendResponse({ success: true });
+    });
+
+    return true;
+  }
+
   if (message.action === "getStatus") {
     chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
       const tab = tabs[0];
-      const { tenantId, tenantName } = await getConfig();
+      const activeTenant = await getActiveTenant();
 
       if (!tab?.url) {
         sendResponse({
           state: "gray",
           reason: "No active tab",
-          tenantId,
-          tenantName
+          activeTenant
         });
         return;
       }
 
-      const result = getState(tab.url, tenantId);
+      const result = getState(tab.url, activeTenant);
 
       sendResponse({
         ...result,
-        tenantId,
-        tenantName,
+        activeTenant,
         currentUrl: tab.url,
         hostname: new URL(tab.url).hostname
       });
@@ -189,18 +218,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "applyTid") {
     chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
       const tab = tabs[0];
-      const { tenantId } = await getConfig();
+      const activeTenant = await getActiveTenant();
 
-      if (!tab?.id || !tab?.url || !tenantId) {
+      if (!tab?.id || !tab?.url || !activeTenant?.tenantId) {
         sendResponse({
           success: false,
-          reason: "Missing active tab or configured tenant ID"
+          reason: "Missing active tab or active tenant"
         });
         return;
       }
 
-      const newUrl = setTid(tab.url, tenantId);
-
+      const newUrl = setTid(tab.url, activeTenant.tenantId);
       await chrome.tabs.update(tab.id, { url: newUrl });
 
       sendResponse({
