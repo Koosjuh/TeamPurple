@@ -1,4 +1,4 @@
-# TID Guard
+ # TID Guard
 
 TID Guard is a lightweight browser extension for Microsoft consultants, MSSPs, SOC analysts and system administrators who regularly work across multiple Microsoft Entra ID tenants using guest accounts or Azure Lighthouse.
 
@@ -178,13 +178,7 @@ TID Guard is currently distributed as a source package and can be installed as a
 
 ### 1. Download the repository
 
-Clone the repository:
-
-```bash
-git clone https://github.com/<yourusername>/tid-guard.git
-```
-
-Or download the repository as a ZIP file from GitHub and extract it.
+Download the repository as a ZIP file from GitHub and extract it.
 
 The folder should contain:
 
