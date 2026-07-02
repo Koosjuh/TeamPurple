@@ -1,0 +1,73 @@
+// =============================================================================
+// MDE Defender Antivirus Health & Status
+// -----------------------------------------------------------------------------
+// Purpose : For endpoints with a HEALTHY EDR sensor that is ACTIVELY connecting,
+//           report Defender AV platform / security intelligence / engine versions
+//           and the Defender AV operating mode (Active, Passive, EDR Block Mode,
+//           Disabled, Passive Audit, Other).
+//
+// Run in  : Microsoft Defender portal  ->  Advanced hunting
+//           (Defender XDR. NOTE: DeviceTvmInfoGathering is NOT ingested into
+//            Microsoft Sentinel, so run this in Defender XDR Advanced hunting.)
+//
+// Tables  : DeviceInfo            - sensor health / onboarding state
+//           DeviceTvmInfoGathering - per-device Defender AV health (AdditionalFields)
+//
+// Notes   : Defender AV health fields require the modern unified sensor
+//           (MsSense.exe 10.8210.*+). On older builds the AV* fields can be empty
+//           / "Unknown" - that is expected.
+//           Third-party AV detection: see 02_MDE_ThirdParty_Antivirus_Detection.kql
+// =============================================================================
+
+// Reporting window: only include devices that have reported within this period.
+let Lookback = 7d;
+// 1) Latest record per device; keep only onboarded Windows/macOS/Linux endpoints
+//    with a healthy + actively connecting sensor that reported recently.
+let HealthyDevices =
+    DeviceInfo
+    | where OnboardingStatus == "Onboarded"
+    | where OSPlatform startswith "Windows" or OSPlatform in~ ("macOS", "Linux")  // exclude Android/iOS/network/IoT
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | where SensorHealthState == "Active"   // "Active" = sensor healthy AND regularly sending telemetry
+    | where Timestamp > ago(Lookback)       // recently reporting
+    | project DeviceId, DeviceName, OSPlatform, OSVersion, OSBuild,
+              SensorHealthState, OnboardingStatus, LastSeen = Timestamp;
+// 2) Latest Defender AV info-gathering record per device.
+let AvHealth =
+    DeviceTvmInfoGathering
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | extend
+        AvMode                 = tostring(AdditionalFields.AvMode),
+        AvPlatformVersion      = tostring(AdditionalFields.AvPlatformVersion),       // AV platform version
+        AvSecurityIntelVersion = tostring(AdditionalFields.AvSignatureVersion),      // AV security intelligence version
+        AvEngineVersion        = tostring(AdditionalFields.AvEngineVersion),         // AV engine version
+        // NOTE: dynamic-bag key access is CASE-SENSITIVE and MS naming is
+        // inconsistent: Platform/Engine = "Uptodate", Signature = "UptoDate".
+        AvIsPlatformUpToDate   = tostring(AdditionalFields.AvIsPlatformUptodate),
+        AvIsSignatureUpToDate  = tostring(AdditionalFields.AvIsSignatureUptoDate),
+        AvIsEngineUpToDate     = tostring(AdditionalFields.AvIsEngineUptodate),
+        AvSignaturePublishTime = todatetime(AdditionalFields.AvSignaturePublishTime)
+    // Official AvMode -> status mapping (see device-health-api-methods-properties):
+    //   ""/3 = Other, 0 = Active, 1 = Passive, 2 = Disabled, 4 = EDR Block Mode, 5 = Passive Audit
+    | extend DefenderAvStatus = case(
+        AvMode == "0", "Active",
+        AvMode == "1", "Passive",
+        AvMode == "2", "Disabled",
+        AvMode == "4", "EDR Block Mode",
+        AvMode == "5", "Passive Audit",
+        AvMode == "3", "Other",
+        AvMode == "",  "Other / Unknown",
+        strcat("Unknown (", AvMode, ")"))
+    | project DeviceId, DefenderAvStatus, AvMode,
+              AvPlatformVersion, AvSecurityIntelVersion, AvEngineVersion,
+              AvIsPlatformUpToDate, AvIsSignatureUpToDate, AvIsEngineUpToDate,
+              AvSignaturePublishTime;
+// 3) Combine.
+HealthyDevices
+| join kind=leftouter AvHealth on DeviceId
+| project DeviceName, OSPlatform, OSVersion, OSBuild, SensorHealthState,
+          DefenderAvStatus,
+          AvPlatformVersion, AvSecurityIntelVersion, AvEngineVersion,
+          AvIsPlatformUpToDate, AvIsSignatureUpToDate, AvIsEngineUpToDate,
+          AvSignaturePublishTime, LastSeen
+| sort by DeviceName asc

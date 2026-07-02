@@ -1,0 +1,89 @@
+// =============================================================================
+// MDE - HP Wolf Security devices: full MDE / Defender AV status
+// -----------------------------------------------------------------------------
+// Purpose : Find every device that has "HP Wolf Security" installed and report
+//           its complete MDE / Defender AV posture (sensor health, AV mode,
+//           platform / engine / signature versions and up-to-date flags).
+//
+// Why     : HP Wolf Security ships pre-installed on HP hardware. It is an
+//           isolation / threat-containment suite, NOT a registered real-time AV,
+//           so it normally does NOT push Defender into Passive mode - Defender
+//           should remain Active alongside it. This query lets you confirm that
+//           Defender AV is genuinely healthy and Active on the HP fleet.
+//
+// Run in  : Microsoft Defender portal  ->  Advanced hunting (Defender XDR)
+//           (DeviceTvmInfoGathering is NOT in Microsoft Sentinel - run in XDR.)
+//
+// Tables  : DeviceTvmSoftwareInventory - locates HP Wolf Security + version
+//           DeviceInfo                 - sensor health / onboarding
+//           DeviceTvmInfoGathering     - Defender AV health (AdditionalFields)
+//
+// Note    : AdditionalFields keys are CASE-SENSITIVE and MS naming is inconsistent
+//           (Platform/Engine = "Uptodate", Signature = "UptoDate"). Keys verified
+//           via 00_DISCOVERY_InfoGathering_AV_Fields.kql.
+// =============================================================================
+
+let Lookback = 7d;
+let HpWolfTerms = dynamic(["hp wolf security", "hp wolf"]);
+// 1) Devices that have HP Wolf Security installed (matched on SoftwareName only).
+//    SoftwareName uses underscores instead of spaces (e.g. "hp_wolf_security"),
+//    so normalize "_" -> " " before matching the readable term list.
+let HpWolfDevices =
+    DeviceTvmSoftwareInventory
+    | extend SoftwareNameNorm = replace_string(tolower(SoftwareName), "_", " ")
+    | where SoftwareNameNorm has_any (HpWolfTerms)
+    | summarize arg_max(SoftwareVersion, *) by DeviceId
+    | project DeviceId,
+              HpWolfProduct = SoftwareName,
+              HpWolfVersion = SoftwareVersion;
+// 2) Latest sensor health / onboarding state per device.
+let SensorState =
+    DeviceInfo
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | project DeviceId, DeviceName, OSPlatform, OSVersion, OSBuild,
+              OnboardingStatus, SensorHealthState, LastSeen = Timestamp;
+// 3) Latest Defender AV info-gathering record per device (full posture).
+let AvHealth =
+    DeviceTvmInfoGathering
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | extend
+        AvMode                 = tostring(AdditionalFields.AvMode),
+        AvPlatformVersion      = tostring(AdditionalFields.AvPlatformVersion),
+        AvSecurityIntelVersion = tostring(AdditionalFields.AvSignatureVersion),
+        AvEngineVersion        = tostring(AdditionalFields.AvEngineVersion),
+        AvIsPlatformUpToDate   = tostring(AdditionalFields.AvIsPlatformUptodate),
+        AvIsSignatureUpToDate  = tostring(AdditionalFields.AvIsSignatureUptoDate),
+        AvIsEngineUpToDate     = tostring(AdditionalFields.AvIsEngineUptodate),
+        AvSignaturePublishTime = todatetime(AdditionalFields.AvSignaturePublishTime),
+        AvSignatureUpdateTime  = todatetime(AdditionalFields.AvSignatureUpdateTime)
+    // AvMode -> status: 0=Active 1=Passive 2=Disabled 3=Other 4=EDR Block 5=Passive Audit
+    | extend DefenderAvStatus = case(
+        AvMode == "0", "Active",
+        AvMode == "1", "Passive",
+        AvMode == "2", "Disabled",
+        AvMode == "4", "EDR Block Mode",
+        AvMode == "5", "Passive Audit",
+        AvMode == "3", "Other",
+        AvMode == "",  "Other / Unknown",
+        strcat("Unknown (", AvMode, ")"))
+    | project DeviceId, DefenderAvStatus, AvMode,
+              AvPlatformVersion, AvSecurityIntelVersion, AvEngineVersion,
+              AvIsPlatformUpToDate, AvIsSignatureUpToDate, AvIsEngineUpToDate,
+              AvSignaturePublishTime, AvSignatureUpdateTime;
+// 4) HP Wolf devices = spine; attach sensor + AV posture (leftouter so a device
+//    is never dropped just because one table lacks a record for it).
+//    NO filtering on AV status: every HP Wolf device is reported regardless of
+//    Defender AV mode (Active, Passive, Disabled, Unknown, or no AV record at all).
+//    Defender AV status is shown purely as an informational column.
+HpWolfDevices
+| join kind=leftouter SensorState on DeviceId
+| join kind=leftouter AvHealth   on DeviceId
+| extend DefenderAvStatus = coalesce(DefenderAvStatus, "<no AV record>")
+| project DeviceName, OSPlatform, OSVersion, OSBuild,
+          OnboardingStatus, SensorHealthState,
+          HpWolfProduct, HpWolfVersion,
+          DefenderAvStatus,
+          AvPlatformVersion, AvSecurityIntelVersion, AvEngineVersion,
+          AvIsPlatformUpToDate, AvIsSignatureUpToDate, AvIsEngineUpToDate,
+          AvSignaturePublishTime, AvSignatureUpdateTime, LastSeen
+| sort by SensorHealthState asc, DeviceName asc

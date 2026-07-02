@@ -1,0 +1,77 @@
+// =============================================================================
+// MDE Third-Party Antivirus Detection
+// -----------------------------------------------------------------------------
+// Purpose : Identify installed third-party AV / EDR products and versions.
+//
+// Run in  : Microsoft Defender portal  ->  Advanced hunting (Defender XDR)
+//
+// Background:
+//   Advanced hunting does NOT expose the Windows Security Center "registered AV
+//   product" name directly. Two practical signals exist:
+//     (a) In 01_MDE_Defender_AV_Health_and_Status.kql, a Defender AV mode of
+//         "Passive" / "EDR Block Mode" strongly indicates a registered
+//         third-party real-time AV is active (Defender goes passive when another
+//         AV registers with Windows Security Center).
+//     (b) This query lists the actual installed third-party AV product + version
+//         from the software inventory, by matching known AV vendor/product names.
+//
+// Tune the AvVendors list below to match the products you care about.
+// =============================================================================
+
+let AvVendors = dynamic([
+    "crowdstrike","sentinelone","symantec","broadcom","mcafee","trellix",
+    "sophos","trend micro","trendmicro","apex one","eset","kaspersky",
+    "bitdefender","carbon black","cylance","blackberry",
+    "forticlient","webroot","malwarebytes","f-secure",
+    "withsecure","avast","avg","panda","cisco secure endpoint","cisco amp",
+    "cortex xdr","deep instinct","huntress","watchguard","g data",
+    "hp wolf security","hp wolf"
+]);
+// 1) Endpoints with a HEALTHY, actively-connecting sensor (same gate as query 01).
+let SensorActiveDevices =
+    DeviceInfo
+    | where OnboardingStatus == "Onboarded"
+    | where OSPlatform startswith "Windows" or OSPlatform in~ ("macOS", "Linux")
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | where SensorHealthState == "Active"
+    | project DeviceId, DeviceName, OSPlatform, OSVersion, LastSeen = Timestamp;
+// 2) Of those, the ones where Defender AV is NOT in Active mode. The empty/null
+//    AvMode bucket maps to "Other / Unknown" (no AV health reported) - excluded
+//    here as noise; change the filter to just != "Active" to include them.
+//    Same AvMode mapping / (case-sensitive) keys as 01_MDE_Defender_AV_Health_and_Status.kql.
+let DefenderNotActive =
+    DeviceTvmInfoGathering
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | extend AvMode = tostring(AdditionalFields.AvMode)
+    | extend DefenderAvStatus = case(
+        AvMode == "0", "Active",
+        AvMode == "1", "Passive",
+        AvMode == "2", "Disabled",
+        AvMode == "4", "EDR Block Mode",
+        AvMode == "5", "Passive Audit",
+        AvMode == "3", "Other",
+        AvMode == "",  "Other / Unknown",
+        strcat("Unknown (", AvMode, ")"))
+    | where DefenderAvStatus !in ("Active", "Other / Unknown")
+    | project DeviceId, DefenderAvStatus;
+// 3) Sensor Active AND Defender NOT Active, annotated with any installed third-party AV.
+let ThirdPartyAv =
+    DeviceTvmSoftwareInventory
+    // Match on SoftwareName only - matching SoftwareVendor too produced too many
+    // false positives (vendors ship non-AV software under the same company name).
+    // SoftwareName uses underscores instead of spaces (e.g. "trend_micro"), so
+    // normalize "_" -> " " before matching the readable term list.
+    | extend SoftwareNameNorm = replace_string(tolower(SoftwareName), "_", " ")
+    | where SoftwareNameNorm has_any (AvVendors)
+    | summarize arg_max(SoftwareVersion, *) by DeviceId, SoftwareName
+    | project DeviceId, ThirdPartyAvVendor = SoftwareVendor,
+              ThirdPartyAvProduct = SoftwareName, ThirdPartyAvVersion = SoftwareVersion;
+SensorActiveDevices
+| join kind=inner DefenderNotActive on DeviceId
+| join kind=leftouter ThirdPartyAv on DeviceId
+| project DeviceName, OSPlatform, OSVersion,
+          SensorHealthState = "Active",
+          DefenderAvStatus,
+          ThirdPartyAvVendor, ThirdPartyAvProduct, ThirdPartyAvVersion,
+          LastSeen
+| sort by DefenderAvStatus asc, DeviceName asc

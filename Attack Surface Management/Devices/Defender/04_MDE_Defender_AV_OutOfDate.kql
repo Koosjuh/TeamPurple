@@ -1,0 +1,150 @@
+// =============================================================================
+// MDE - Defender AV Active but a component is OUT OF DATE
+// -----------------------------------------------------------------------------
+// Purpose : List the MOST ACTIONABLE endpoints where Defender AV is the ACTIVE
+//           antivirus (DefenderAvStatus == "Active") but protection is degraded,
+//           i.e. EITHER of:
+//             - PlatformSupportStatus != "Supported"  (AV platform out of support
+//               for the OS: Windows older than N-2, or macOS/Linux build expired)
+//             - signatures stale: AvSignaturePublishTime is > 4 weeks older than
+//               the device's LastSeen time
+//           These are protected-but-degraded devices that need an update push.
+//
+// Run in  : Microsoft Defender portal  ->  Advanced hunting (Defender XDR)
+//           (DeviceTvmInfoGathering is NOT in Microsoft Sentinel - run in XDR.)
+//
+// Tables  : DeviceInfo             - sensor health / onboarding
+//           DeviceTvmInfoGathering - Defender AV health (AdditionalFields)
+//
+// Note    : AdditionalFields keys are CASE-SENSITIVE and MS naming is inconsistent
+//           (Platform/Engine = "Uptodate", Signature = "UptoDate"). Keys verified
+//           via 00_DISCOVERY_InfoGathering_AV_Fields.kql. The up-to-date flags are
+//           stored as strings "true"/"false".
+// =============================================================================
+
+let Lookback = 7d;
+// Grace period for freshly-onboarded devices: a device must have been first seen at
+// least this long ago before we flag it. New endpoints come onboarded with whatever
+// platform/signatures shipped on the image and haven't run their first update cycle
+// yet - flagging them is noise, not action. FirstSeen is derived as min(Timestamp)
+// per device (DeviceInfo has no native first-seen column); long-onboarded devices sit
+// at the table's retention edge (well past the grace period), so only genuinely new
+// devices are excluded.
+let MinDeviceAge = 7d;
+// Dynamic Windows "N-2" floor (no hardcoded version to maintain).
+// Microsoft supports the latest monthly platform plus the previous two (N-1, N-2);
+// older is out of support. The build encodes its release month as 4.18.YYMM[i].x,
+// so we derive the floor instead of hardcoding it:
+//   1. WinFleetLatestMonth = newest Windows (4.18.*) platform build month actually
+//      present in the tenant - tracks what Microsoft has really pushed here.
+//   2. Guard: if the fleet's newest build is itself behind the current calendar
+//      month (whole fleet lagging), fall back to the current month so the floor
+//      can't drift downward and silently stop flagging laggards.
+//   3. Floor = (guarded latest month) - 2 months.  Build < floor => out of support.
+//   Ref: https://learn.microsoft.com/defender-endpoint/microsoft-defender-antivirus-updates
+let WinFleetLatestMonth = toscalar(
+    DeviceTvmInfoGathering
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | extend v = tostring(AdditionalFields.AvPlatformVersion)
+    | where v startswith "4.18."                       // Windows platform line only
+    | extend mid = tostring(split(v, ".")[2])
+    | where strlen(mid) >= 4
+    | extend yy = toint(substring(mid, 0, 2)), mm = toint(substring(mid, 2, 2))
+    | where mm between (1 .. 12)
+    | summarize max(make_datetime(2000 + yy, mm, 1)));
+let WinLatestMonth = iff(WinFleetLatestMonth >= startofmonth(now()),
+                         WinFleetLatestMonth, startofmonth(now()));   // calendar guard
+let WinPlatformFloor = datetime_add('month', -2, WinLatestMonth);
+// macOS / Linux do not use the N-2 rule - each build EXPIRES (mac = 6 months,
+// Linux = 9 months), derived from the version below.
+// 1) Onboarded endpoints with a healthy, actively-connecting sensor (as query 01).
+let HealthyDevices =
+    DeviceInfo
+    | where OnboardingStatus == "Onboarded"
+    | where OSPlatform startswith "Windows" or OSPlatform in~ ("macOS", "Linux")
+    | summarize arg_max(Timestamp, *), FirstSeen = min(Timestamp) by DeviceId
+    | where SensorHealthState == "Active"
+    | where Timestamp > ago(Lookback)
+    | where FirstSeen < ago(MinDeviceAge)          // skip recently-onboarded devices (no update cycle yet)
+    | project DeviceId, DeviceName, OSPlatform, OSVersion, OSBuild, LastSeen = Timestamp, FirstSeen;
+// 2) Latest Defender AV info-gathering record per device.
+let AvHealth =
+    DeviceTvmInfoGathering
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | extend
+        AvMode                 = tostring(AdditionalFields.AvMode),
+        AvPlatformVersion      = tostring(AdditionalFields.AvPlatformVersion),
+        AvSecurityIntelVersion = tostring(AdditionalFields.AvSignatureVersion),
+        AvEngineVersion        = tostring(AdditionalFields.AvEngineVersion),
+        AvIsPlatformUpToDate   = tolower(tostring(AdditionalFields.AvIsPlatformUptodate)),
+        AvIsSignatureUpToDate  = tolower(tostring(AdditionalFields.AvIsSignatureUptoDate)),
+        AvIsEngineUpToDate     = tolower(tostring(AdditionalFields.AvIsEngineUptodate)),
+        AvSignaturePublishTime = todatetime(AdditionalFields.AvSignaturePublishTime),
+        AvPlatformExpirationTime = todatetime(AdditionalFields.AvPlatformExpirationTime)
+    | extend DefenderAvStatus = case(
+        AvMode == "0", "Active",
+        AvMode == "1", "Passive",
+        AvMode == "2", "Disabled",
+        AvMode == "4", "EDR Block Mode",
+        AvMode == "5", "Passive Audit",
+        AvMode == "3", "Other",
+        AvMode == "",  "Other / Unknown",
+        strcat("Unknown (", AvMode, ")"))
+    | project DeviceId, DefenderAvStatus,
+              AvPlatformVersion, AvSecurityIntelVersion, AvEngineVersion,
+              AvIsPlatformUpToDate, AvIsSignatureUpToDate, AvIsEngineUpToDate,
+              AvSignaturePublishTime, AvPlatformExpirationTime;
+// 3) Most-actionable devices: Defender is Active, but EITHER the AV platform is
+//    not supported for this OS, OR signatures are badly stale (security
+//    intelligence last published > 4 weeks before the device was last seen).
+HealthyDevices
+| join kind=inner AvHealth on DeviceId
+| where DefenderAvStatus == "Active"
+// macOS/Linux platform versions encode the release month as 101.YYMM[i].build
+// (e.g. "101.26032.0016" -> 2026-03). AvPlatformExpirationTime is often empty on
+// these OSes, so derive the build date from the version and compute an effective
+// expiry (mac builds expire after 6 months, Linux after 9). Use the reported
+// AvPlatformExpirationTime when present, otherwise the derived value.
+// YYMM segment: Windows = 4.18.[YYMM].x (index 2), macOS/Linux = 101.[YYMM].x (index 1)
+| extend _PlatMid   = tostring(split(AvPlatformVersion, ".")[iff(OSPlatform startswith "Windows", 2, 1)])
+| extend _PlatYear  = iff(strlen(_PlatMid) >= 4, toint(substring(_PlatMid, 0, 2)), int(null))
+| extend _PlatMonth = iff(strlen(_PlatMid) >= 4, toint(substring(_PlatMid, 2, 2)), int(null))
+| extend _PlatBuildDate = iff(
+        isnotnull(_PlatYear) and isnotnull(_PlatMonth) and _PlatMonth between (1 .. 12),
+        make_datetime(2000 + _PlatYear, _PlatMonth, 1), datetime(null))
+| extend PlatformExpiryEffective = case(
+        isnotnull(AvPlatformExpirationTime),                         AvPlatformExpirationTime,
+        OSPlatform =~ "macOS" and isnotnull(_PlatBuildDate), datetime_add('month', 6, _PlatBuildDate),
+        OSPlatform =~ "Linux" and isnotnull(_PlatBuildDate), datetime_add('month', 9, _PlatBuildDate),
+        datetime(null))
+// Per-OS platform support check (different lifecycle models per OS):
+//   Windows      -> build month must be >= the dynamic N-2 floor (WinPlatformFloor)
+//   macOS/Linux  -> build must not have passed its (reported or derived) expiry
+| extend PlatformSupportStatus = case(
+        OSPlatform startswith "Windows",
+            case(isnull(_PlatBuildDate), "Unknown",
+                 _PlatBuildDate < WinPlatformFloor, "Unsupported (older than N-2)",
+                 "Supported"),
+        OSPlatform in~ ("macOS", "Linux"),
+            case(isnull(PlatformExpiryEffective), "Unknown",
+                 PlatformExpiryEffective < now(), "Expired / Unsupported",
+                 "Supported"),
+        "Unknown")
+// Signature staleness measured against the device's own last-seen time (not now()),
+// so a device that simply hasn't reported recently isn't penalised twice.
+// Null AvSignaturePublishTime -> null age -> not matched here.
+| extend SignatureAgeDays = datetime_diff('day', LastSeen, AvSignaturePublishTime)
+| extend SignaturesStale = SignatureAgeDays > 28      // > 4 weeks
+// Actionability gate. NOTE: "!= Supported" includes the "Unknown" bucket (no
+// platform data). Change to `in ("Unsupported (older than N-2)", "Expired / Unsupported")`
+// to drop Unknowns if they prove noisy.
+| where PlatformSupportStatus != "Supported"
+     or SignaturesStale
+| extend ActionReasons = strcat_array(array_concat(
+        iff(PlatformSupportStatus != "Supported",
+            pack_array(strcat("Platform-", PlatformSupportStatus)), dynamic([])),
+        iff(SignaturesStale, pack_array(strcat("Signatures-Stale(", SignatureAgeDays, "d)")), dynamic([]))
+    ), ", ")
+| project DeviceName, OSPlatform, OSVersion, OSBuild, DefenderAvStatus, ActionReasons, PlatformSupportStatus,
+          SignatureAgeDays, LastSeen, AvSecurityIntelVersion, AvEngineVersion, AvPlatformVersion, AvSignaturePublishTime
+| sort by PlatformSupportStatus asc, SignatureAgeDays desc, DeviceName asc
