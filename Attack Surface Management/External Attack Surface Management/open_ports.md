@@ -1,34 +1,109 @@
 ```kql
-EasmAssetBanner_CL
-| where isnotempty(Port_d)
-| summarize OpenPorts=make_set(toint(Port_d)) by IPAddress=AssetName_s
+let RiskyPorts = externaldata(
+    RiskPort:int,
+    Service:string,
+    RiskCategory:string,
+    Comment:string
+)
+[
+    "https://raw.githubusercontent.com/Koosjuh/TeamPurple/refs/heads/main/Attack%20Surface%20Management/External%20Attack%20Surface%20Management/risky_ports.csv"
+]
+with (
+    format = "csv",
+    ignoreFirstRecord = true
+);
+let EasmOpenPorts =
+    EasmAssetBanner_CL
+    | where isnotempty(Port_d)
+    | extend Port = toint(Port_d)
+    | project
+        IPAddress = AssetName_s,
+        Port,
+        Banner = Banner_s,
+        BannerLastSeen = BannerLastSeen_t;
+let AllOpenPorts =
+    EasmOpenPorts
+    | summarize OpenPorts = make_set(Port) by IPAddress;
+let RiskyOpenPorts =
+    EasmOpenPorts
+    | join kind=inner RiskyPorts on $left.Port == $right.RiskPort
+    | extend RiskyPort = strcat(
+        "[",
+        Service,
+        "(",
+        tostring(Port),
+        ") - ",
+        RiskCategory,
+        iff(isempty(Comment), "", strcat(" - ", Comment)),
+        "]"
+    )
+    | summarize
+        RiskyPorts = make_set(RiskyPort),
+        RiskyPortDetails = make_set(
+            strcat(
+                "Port=", tostring(Port),
+                "; Service=", Service,
+                "; RiskCategory=", RiskCategory,
+                iff(isempty(Comment), "", strcat("; Comment=", Comment)),
+                "; LastSeen=", tostring(BannerLastSeen)
+            )
+        )
+        by IPAddress;
+AllOpenPorts
+| join kind=leftouter RiskyOpenPorts on IPAddress
+| project IPAddress, OpenPorts, RiskyPorts, RiskyPortDetails
 | order by IPAddress asc
 ```
 
-### Internet-exposed open ports per IP address
+# Microsoft Defender EASM Risky Open Ports Query
 
-This query retrieves all discovered internet-facing open ports from the Microsoft Defender EASM banner data and groups them by IP address.
+This KQL query identifies internet-facing open ports discovered by Microsoft Defender External Attack Surface Management and enriches them with a custom risky-port reference list hosted in GitHub.
 
-For each IP address, it creates a unique list of observed open ports, providing a concise overview of the externally exposed services identified during EASM scans.
+## Purpose
 
-This query is useful for quickly identifying an organization's external attack surface and determining which services are exposed to the Internet.
+The query provides a concise overview of exposed services per IP address and highlights ports that match a predefined risky-port catalog.
 
-```kql
-let HighRiskPorts = dynamic([21,22,23,25,53,135,139,445,1433,1521,2049,3306,3389,5432,5900,6379,9200,11211,27017]);
+It helps answer:
+
+- Which ports are exposed per public IP address?
+- Which exposed ports are considered risky?
+- What service and risk category is associated with each risky port?
+- When was the risky port last observed by EASM?
+
+## Data sources
+
+### Microsoft Defender EASM
+
+The query uses the following Log Analytics table:
+
 EasmAssetBanner_CL
-| where isnotempty(Port_d)
-| extend Port = toint(Port_d)
-| summarize
-    OpenPorts = make_set(Port),
-    HighRiskOpenPorts = make_set_if(strcat("!!! ", tostring(Port)), Port in (HighRiskPorts))
-by IPAddress = AssetName_s
-| extend HasHighRiskPorts = array_length(HighRiskOpenPorts) > 0
-| order by HasHighRiskPorts desc, IPAddress asc
-```
-### Internet-exposed open ports with high-risk identification
 
-This query retrieves all internet-facing open ports identified by Microsoft Defender EASM and groups them by IP address.
+#### Required columns:
 
-In addition to listing all observed open ports, the query compares each port against a predefined list of commonly targeted or high-risk services, such as SSH, SMB, RDP, SQL Server, and Elasticsearch. Any matching ports are highlighted in a separate column and prefixed with `!!!` to make them easy to identify during review.
+AssetName_s
+Port_d
+Banner_s
+BannerLastSeen_t
+Risky ports CSV
 
-This provides a quick overview of an organization's external attack surface while helping prioritize systems that expose services commonly associated with remote administration, file sharing, databases, or other high-value attack vectors.
+The query loads a GitHub-hosted CSV using externaldata.
+
+#### CSV format:
+
+Port,Service,RiskCategory,Comment
+22,SSH,Remote Administration,
+3389,RDP,Remote Administration,
+445,SMB,Windows File Sharing,
+
+## Output columns
+
+| Column | Description |
+|---------|-------------|
+| **IPAddress** | Public IP address identified by Microsoft Defender EASM. |
+| **OpenPorts** | A complete list of all internet-facing open ports observed for the IP address. |
+| **RiskyPorts** | A filtered list of ports that match entries in the risky port reference file, displayed as `[Service(Port) - RiskCategory - Comment]`. |
+| **RiskyPortDetails** | Detailed information for each matched risky port, including the port number, service name, risk category, optional analyst comment, and the last time the service banner was observed by EASM. |
+
+The query does not automatically confirm exploitability. It identifies exposed services that should be reviewed because they match the risky-port reference list.
+
+Risk depends on context, including business purpose, source restrictions, authentication, patch level, and compensating controls.
