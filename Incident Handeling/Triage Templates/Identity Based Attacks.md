@@ -36,7 +36,6 @@ User:
 
 #### Session Check
 ```kql
-// ws-vit-c-aad-user-audit-log.kql
 // This KQL query is used to determine the Azure Active Directory audit history of a specific user or application
 // SET PARAMETERS
 let comb_entity = "COMB_ENTITY"; // Set the User Principal Name, UserId, AppId or App Display Name. Example: hello@wortell.nl, 123456789-abcd-1234-efgh-123456789012, Azure AD SSO
@@ -69,7 +68,6 @@ AuditLogs
 | project TimeGenerated, UserPrincipalName_, id_, InitiatedBy_, InitiatedByIp_, OperationName, Result, ResultDescription
 | sort by TimeGenerated desc
 
-// ws-vit-c-aad-user-interactive.kql
 // This KQL query is used to determine interactive sign-in history for a specific user
 // SET PARAMETERS
 let comb_entity = "COMB_ENTITY"; // Set the User Principal Name or UserId. Example: hello@wortell.nl, 123456789-abcd-1234-efgh-123456789012
@@ -92,10 +90,9 @@ SigninLogs
 | extend Browser_ = tostring(DeviceDetail.browser)
 | extend ResultDescription = iff(ResultDescription =~ "Other", iff(isempty(Code), "Other", Message), ResultDescription)
 | extend OrigSignInTime_ = CreatedDateTime
-| project TimeGenerated, OrigSignInTime_, UserPrincipalName, AuthenticationRequirement, ResultType, ResultDescription, IPAddress, Location, AuthenticationMethod_, AuthStatusSuccess_, authenticationStepResultDetail_, AdditionalDetails_, SessionId, UniqueTokenIdentifier, RiskState, RiskDetail, DeviceId_, DeviceTrustType_, UserAgent, OperatingSystem_, Browser_, ClientAppUsed, AppDisplayName
+| project TimeGenerated, OrigSignInTime_, UserPrincipalName, AuthenticationRequirement, ResultType, ResultDescription, IPAddress, Location, AuthenticationMethod_, AuthStatusSuccess_, authenticationStepResultDetail_, AuthenticationProtocol, AdditionalDetails_, ConditionalAccessPolicies, ConditionalAccessStatus, NetworkLocationDetails, SessionId, UniqueTokenIdentifier, RiskState, RiskDetail, DeviceId_, DeviceTrustType_, UserAgent, OperatingSystem_, Browser_, ClientAppUsed, AppDisplayName
 | sort by TimeGenerated desc
 
-// ws-vit-c-aad-user-noninteractive.kql
 // This KQL query is used to determine non-interactive sign-in history for a specific user
 // SET PARAMETERS
 let comb_entity = "COMB_ENTITY"; // Set the User Principal Name or UserId. Example: hello@wortell.nl, 123456789-abcd-1234-efgh-123456789012
@@ -115,7 +112,6 @@ AADNonInteractiveUserSignInLogs
 | project TimeGenerated, OrigSignInTime_, UserPrincipalName, AuthenticationRequirement, ResultType, ResultDescription, IPAddress, Location, AdditionalDetails_, SessionId, UniqueTokenIdentifier, RiskState, RiskDetail, DeviceId_, DeviceTrustType_, UserAgent, OperatingSystem_, Browser_, ClientAppUsed, AppDisplayName
 | sort by TimeGenerated desc
 
-// ws-vit-c-aad-user-mfa.kql
 // This KQL query is used to determine valid interactive MFA sign-in history for a specific user
 // SET PARAMETERS
 let comb_entity = "COMB_ENTITY"; // Set the User Principal Name or UserId. Example: hello@wortell.nl, 123456789-abcd-1234-efgh-123456789012
@@ -148,7 +144,6 @@ SigninLogs
 //| project TimeGenerated, OrigSignInTime_, UserPrincipalName, IPAddress, Location, ResultType, AuthenticationMethod_, AuthStatusSuccess_, authenticationMethodDetail_, AdditionalDetails_, SessionId, UniqueTokenIdentifier, DeviceId_, DeviceTrustType_, ClientAppUsed, AppDisplayName
 | sort by TimeGenerated desc
 
-// ws-vit-c-office-user-activity-all.kql
 // This KQL query is used to determine all office activity for a specific user
 // SET PARAMETERS
 let user_entity = "USERPRINCIPALNAME"; // Set the User Principal Name or UserId. Example: hello@wortell.nl, 123456789-abcd-1234-efgh-123456789012
@@ -161,7 +156,6 @@ OfficeActivity
 | project TimeGenerated, UserId, SessionId = AppAccessContext.AADSessionId, UniqueTokenIdentifier = AppAccessContext.UniqueTokenId, ClientIP_, OfficeWorkload, Operation, ItemType, SourceFileName, UserAgent, OfficeObjectId
 | sort by TimeGenerated desc
 
-// ws-vit-t-identityinfo-user.kql
 // This KQL query is used to lookup information of a specific user
 // SET PARAMETERS
 let comb_entity = "COMB_ENTITY"; // Set the User Principal Name, AccountObjectId or SamAccountName. Example: hello@wortell.nl, 123456789-abcd-1234-efgh-123456789012, John.Doe
