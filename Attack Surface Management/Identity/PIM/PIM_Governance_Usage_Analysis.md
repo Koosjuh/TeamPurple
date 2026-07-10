@@ -65,6 +65,47 @@ The output is displayed as a pie chart.
 
 ```kql
 let lookback = 30d;
+let PIMEvents =
+    AuditLogs
+    | where TimeGenerated >= ago(lookback)
+    | where OperationName contains "PIM activation"
+    | where Result =~ "success"
+    | extend EventId = tostring(Id);
+let Targets =
+    PIMEvents
+    | mv-expand Target = TargetResources
+    | extend
+        TargetType = tostring(Target.type),
+        TargetName = tostring(Target.displayName);
+let DirectRoles =
+    Targets
+    | where TargetType =~ "Role"
+    | where TargetName !in~ ("Member", "Owner")
+    | summarize
+        TimeGenerated = max(TimeGenerated),
+        ActivatedRole = any(TargetName)
+        by EventId;
+let GroupResourceRoles =
+    Targets
+    | where TargetType =~ "Other"
+    | where TargetName contains "-Resource-"
+    | summarize
+        TimeGenerated = max(TimeGenerated),
+        ActivatedRole = any(TargetName)
+        by EventId;
+union DirectRoles, GroupResourceRoles
+| summarize arg_max(TimeGenerated, *) by EventId
+| summarize Activations = count() by ActivatedRole
+| order by Activations desc
+| render piechart with (
+    title = "PIM role and resource activations during the past 30 days"
+)
+```
+
+For only direct members aand standard roles
+
+```kql
+let lookback = 30d;
 let AuditBase =
     AuditLogs
     | where TimeGenerated >= ago(lookback);
