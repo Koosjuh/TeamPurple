@@ -63,42 +63,39 @@ The output is displayed as a pie chart.
 
 ## KQL 
 
+PIM Groups with roles.
+
 ```kql
 let lookback = 30d;
-let PIMEvents =
-    AuditLogs
-    | where TimeGenerated >= ago(lookback)
-    | where OperationName contains "PIM activation"
-    | where Result =~ "success"
-    | extend EventId = tostring(Id);
-let Targets =
-    PIMEvents
-    | mv-expand Target = TargetResources
-    | extend
-        TargetType = tostring(Target.type),
-        TargetName = tostring(Target.displayName);
-let DirectRoles =
-    Targets
-    | where TargetType =~ "Role"
-    | where TargetName !in~ ("Member", "Owner")
-    | summarize
-        TimeGenerated = max(TimeGenerated),
-        ActivatedRole = any(TargetName)
-        by EventId;
-let GroupResourceRoles =
-    Targets
-    | where TargetType =~ "Other"
-    | where TargetName contains "-Resource-"
-    | summarize
-        TimeGenerated = max(TimeGenerated),
-        ActivatedRole = any(TargetName)
-        by EventId;
-union DirectRoles, GroupResourceRoles
-| summarize arg_max(TimeGenerated, *) by EventId
-| summarize Activations = count() by ActivatedRole
+AuditLogs
+| where TimeGenerated >= ago(lookback)
+| where OperationName contains "PIM activation"
+| where Result =~ "success"
+| extend EventId = tostring(Id)
+| mv-expand Target = TargetResources
+| extend
+    TargetType = tostring(Target.type),
+    TargetName = tostring(Target.displayName)
+| where TargetName !in~ ("Member", "Owner")
+| where
+    TargetType =~ "Role"
+    or TargetType =~ "Group"
+    or (
+        TargetType =~ "Other"
+        and (
+            TargetName contains "-Resource-"
+            or TargetName contains "-PIM-"
+        )
+    )
+| summarize
+    TimeGenerated = max(TimeGenerated),
+    ActivatedRole = any(TargetName),
+    TargetType = any(TargetType)
+    by EventId
+| summarize Activations = count() by ActivatedRole, TargetType
 | order by Activations desc
 | render piechart with (
-    title = "PIM role and resource activations during the past 30 days"
+    title = "PIM role and group activations during the past 30 days"
 )
 ```
 
