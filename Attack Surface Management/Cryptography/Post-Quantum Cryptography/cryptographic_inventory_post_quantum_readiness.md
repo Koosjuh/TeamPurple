@@ -1,7 +1,5 @@
 # Cryptographic Inventory & Post-Quantum Readiness
 
-## Contents
-
 **Part 1 — External Attack Surface**
 - Why this matters now · What this assessment can and cannot see · Recommended customer actions (phased)
 - External inventory queries 1–7 (Defender EASM): signature algorithms · weak/deprecated algorithms · quantum-vulnerable keys · legacy TLS insights · self-signed/private-PKI certs · migration prioritization matrix · certificate lifetimes
