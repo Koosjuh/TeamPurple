@@ -59,7 +59,7 @@ This is no longer only a technical concern. It is becoming a compliance obligati
 
 ## What this assessment can and cannot see
 
-Our External Attack Surface Management (EASM) platform observes the certificates and TLS configurations presented by your public-facing assets. Two honest scoping notes:
+External Attack Surface Management (EASM) observes the certificates and TLS configurations presented by your public-facing assets. Two scoping notes:
 
 1. **Every certificate we observe today is quantum-vulnerable.** All public TLS certificates currently use RSA or ECDSA — no public CA issues PQC certificates yet. The value of this inventory is therefore not "which assets are PQC-ready" but **which assets carry the highest exposure and migration cost**, so remediation can be sequenced against the 2030/2035 deadlines.
 2. **PQC key exchange is not visible in certificate data.** Hybrid key agreement (e.g. X25519MLKEM768, now default in major browsers) is negotiated in the TLS handshake, not encoded in the certificate. Measuring actual PQC handshake support requires active scanning, which we can perform as a follow-up engagement.
