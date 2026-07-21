@@ -1,7 +1,7 @@
 # Cryptographic Inventory & Post-Quantum Readiness
 
 **Part 1 — External Attack Surface**
-- Why this matters now · What this assessment can and cannot see · Recommended customer actions (phased)
+- Why this matters now · What this assessment can and cannot see · Recommended actions (phased)
 - External inventory queries 1–7 (Defender EASM): signature algorithms · weak/deprecated algorithms · quantum-vulnerable keys · legacy TLS insights · self-signed/private-PKI certs · migration prioritization matrix · certificate lifetimes
 
 **Part 2 — Internal Layers**
@@ -16,7 +16,7 @@
 
 ## How to use this document
 
-This is a **reusable assessment template**, validated end-to-end against a live environment. Per engagement: (1) run the queries section by section, enumeration-first; (2) record every result — including empty ones, with their coverage label — into the companion **findings matrix** (`findings-matrix-template.md`); (3) score maturity per the level criteria, applying the coverage cap; (4) seed the detection watchlists from the findings and deploy the R1–R7 pack; (5) the filled matrix plus this document's narrative sections *is* the customer report. Placeholders throughout use `⟨angle brackets⟩`. Queries may fail per tenant on schema variance — that is expected and diagnostic (see the schema-defensiveness convention below); the fix patterns are embedded in each section.
+This is a **reusable assessment template**, validated end-to-end against a live environment. Per engagement: (1) run the queries section by section, enumeration-first; (2) record every result — including empty ones, with their coverage label — into the companion **findings matrix** (`findings-matrix-template.md`); (3) score maturity per the level criteria, applying the coverage cap; (4) seed the detection watchlists from the findings and deploy the R1–R7 pack; (5) the filled matrix plus this document's narrative sections *is* the report. Placeholders throughout use `⟨angle brackets⟩`. Queries may fail per tenant on schema variance — that is expected and diagnostic (see the schema-defensiveness convention below); the fix patterns are embedded in each section.
 
 ## How to read this document (legend)
 
@@ -72,7 +72,7 @@ What the inventory *does* reliably surface, and what this section reports on:
 | Self-signed and internally-issued certificates on public assets | Indicates private PKI dependencies — root/issuing CA migration to PQC has the longest lead time of any component |
 | Certificate lifetimes and renewal patterns | Long-lived certificates and manual renewal processes are incompatible with the crypto-agility PQC migration demands |
 
-## Recommended customer actions — phased
+## Recommended actions — phased
 
 **Immediate (this quarter)**
 1. **Establish the cryptographic inventory** (this report is that inventory; keep the coverage table current).
@@ -317,7 +317,7 @@ AADServicePrincipalSignInLogs
 
 ## Layer 2 — On-premises Active Directory
 
-> **Prerequisite:** queries 2.1–2.2 require domain controller Security events ingested via AMA/legacy agent (`SecurityEvent` table). If the customer runs Defender for Identity only, equivalent hunting is possible in `IdentityLogonEvents` (noted per query).
+> **Prerequisite:** queries 2.1–2.2 require domain controller Security events ingested via AMA/legacy agent (`SecurityEvent` table). If the environment runs Defender for Identity only, equivalent hunting is possible in `IdentityLogonEvents` (noted per query).
 
 ### 2.1 Weak Kerberos ticket encryption (RC4 / DES)
 
@@ -357,9 +357,9 @@ Defender for Identity equivalent: `IdentityLogonEvents | where LogonType == "Ker
 
 ### 2.1b Is AES Kerberos good enough?
 
-Once RC4/DES are gone, the answer is **yes for the symmetric core, conditional on key material, no for the certificate entry points** — four distinct verdicts customers tend to collapse into one:
+Once RC4/DES are gone, the answer is **yes for the symmetric core, conditional on key material, no for the certificate entry points** — four distinct verdicts corporations tend to collapse into one:
 
-- **Ticket encryption:** AES256-CTS (0x12) is post-quantum resilient (symmetric, Grover-only); prefer it over AES128 (0x11) via `msDS-SupportedEncryptionTypes`, same margin logic as BitLocker AES-256. The HMAC-**SHA1** in the etype name is *not* a finding — HMAC-SHA1 is unaffected by SHA-1 collision attacks. RFC 8009 (AES-SHA-2 etypes) is **not implemented by Windows**: AES256-SHA1 is the ceiling, a Microsoft dependency, not a customer gap.
+- **Ticket encryption:** AES256-CTS (0x12) is post-quantum resilient (symmetric, Grover-only); prefer it over AES128 (0x11) via `msDS-SupportedEncryptionTypes`, same margin logic as BitLocker AES-256. The HMAC-**SHA1** in the etype name is *not* a finding — HMAC-SHA1 is unaffected by SHA-1 collision attacks. RFC 8009 (AES-SHA-2 etypes) is **not implemented by Windows**: AES256-SHA1 is the ceiling, a Microsoft dependency, not a enterprise gap.
 - **Key material under the tickets — the real condition:** Kerberoasting attacks the password the key derives from, not the AES. An AES-256 ticket over a human-chosen service account password is offline-crackable regardless of etype. Conditions for "good enough": gMSA/dMSA for service accounts (random 120+ char, auto-rotated), Kerberos pre-auth required everywhere (AS-REP roast surface — also rule R4's territory), and scheduled `krbtgt` double-rotation.
 - **Asymmetric entry points:** PKINIT (smartcards, Windows Hello for Business certificate trust) is RSA/ECC — **quantum-vulnerable**, inheriting the PKI chapter's timeline; post-quantum PKINIT is IETF work-in-progress. Precise report sentence: *Kerberos's symmetric core is PQC-resilient at AES-256; its certificate-based front door is not.*
 
@@ -475,7 +475,7 @@ Interpretation:
 
 ### 2.5 Defender for Identity — sensor-based coverage (when MDI is deployed)
 
-If the customer runs MDI sensors on domain controllers, the AD crypto inventory gains a second telemetry path that is **independent of DC event forwarding** — the sensor parses traffic and ETW on the DC directly. This matters precisely when the `SecurityEvent` path above turns out to be a coverage gap. MDI also converts the config-side PowerShell gap-fill into continuous assessment.
+If the environment runs MDI sensors on domain controllers, the AD crypto inventory gains a second telemetry path that is **independent of DC event forwarding** — the sensor parses traffic and ETW on the DC directly. This matters precisely when the `SecurityEvent` path above turns out to be a coverage gap. MDI also converts the config-side PowerShell gap-fill into continuous assessment.
 
 **Sensor coverage first** (which DCs/servers actually report — the per-DC coverage check):
 
@@ -580,7 +580,7 @@ DeviceTvmSoftwareEvidenceBeta
 // re-run with startswith "3.0" — that list is the September 2026 EOL chase list
 ```
 
-Triage pattern for the attribution output — the disk paths sort into categories with different owners and different urgency: **fleet-wide loaded components** (e.g. OEM-delivered agents like Intel iCLS under `driverstore\filerepository` — remediated in one driver-update wave, typically the bulk of the count); **application vendors** (versioned program folders — suite updates); **platform agents** (Azure extension paths — enable auto-upgrade); **internally built software** (deployment paths with bundled native runtimes — a package bump in the customer's own pipeline, and the concrete evidence for the app-embedded-crypto gap); **dead files** (installer staging folders, `temp` backups, stale profiles — cleanup that inflates the on-disk metric without carrying live risk); and **actively serving one-offs** (e.g. a web/app server binary next to the DLL — smallest counts, highest genuine risk, verify exposure first).
+Triage pattern for the attribution output — the disk paths sort into categories with different owners and different urgency: **fleet-wide loaded components** (e.g. OEM-delivered agents like Intel iCLS under `driverstore\filerepository` — remediated in one driver-update wave, typically the bulk of the count); **application vendors** (versioned program folders — suite updates); **platform agents** (Azure extension paths — enable auto-upgrade); **internally built software** (deployment paths with bundled native runtimes — a package bump in the environment's own pipeline, and the concrete evidence for the app-embedded-crypto gap); **dead files** (installer staging folders, `temp` backups, stale profiles — cleanup that inflates the on-disk metric without carrying live risk); and **actively serving one-offs** (e.g. a web/app server binary next to the DLL — smallest counts, highest genuine risk, verify exposure first).
 
 Because TVM inventories files on disk, refine with load evidence before locking report numbers:
 
@@ -778,7 +778,7 @@ AzureDiagnostics
 | order by Ops desc
 ```
 
-Interpretation: `KeyWrap`/`KeyUnwrap` traffic marks keys wrapping data-encryption keys (CMK, disk encryption, backup) — the high-risk/2030 candidates per the gap-fill note above. `KeySign` marks signing keys on the separate signature-migration track; note Key Vault offers no PQC key types yet — a platform dependency outside the customer's control. Heavy `SecretGet` with little key traffic indicates a config store rather than active crypto. Cross-reference hot `KeyName` entries against the CLI type/size output to produce a prioritized key table rather than a flat dump.
+Interpretation: `KeyWrap`/`KeyUnwrap` traffic marks keys wrapping data-encryption keys (CMK, disk encryption, backup) — the high-risk/2030 candidates per the gap-fill note above. `KeySign` marks signing keys on the separate signature-migration track; note Key Vault offers no PQC key types yet — a platform dependency outside the environment's control. Heavy `SecretGet` with little key traffic indicates a config store rather than active crypto. Cross-reference hot `KeyName` entries against the CLI type/size output to produce a prioritized key table rather than a flat dump.
 
 ---
 
@@ -786,7 +786,7 @@ Interpretation: `KeyWrap`/`KeyUnwrap` traffic marks keys wrapping data-encryptio
 
 The inventory above is entirely about **asymmetric** cryptography, which Shor's algorithm breaks outright. **Symmetric** cryptography (AES) is only weakened by Grover's algorithm, which halves effective key strength: AES-256 remains post-quantum safe, AES-128 reduces to ~64-bit-equivalent security. This distinction belongs in the report explicitly — "all current cryptography is quantum-vulnerable" is only true of the asymmetric layer, and precision here builds credibility.
 
-The actionable consequence, available today with no platform dependency: **BitLocker defaults to XTS-AES-128.** Moving the encryption-method policy to XTS-AES-256 for devices holding long-lived sensitive data (and AES-256 generally where configurable: IPsec proposals, backup encryption, storage) is typically the only PQC-readiness action a customer can *complete* this quarter, and aligns with CNSA 2.0's AES-256 mandate. Verify via Intune BitLocker policy / configuration baselines; note that changing the method only affects newly encrypted volumes, so existing devices migrate at re-encryption or reimage.
+The actionable consequence, available today with no platform dependency: **BitLocker defaults to XTS-AES-128.** Moving the encryption-method policy to XTS-AES-256 for devices holding long-lived sensitive data (and AES-256 generally where configurable: IPsec proposals, backup encryption, storage) is typically the only PQC-readiness action a corporation can *complete* this quarter, and aligns with CNSA 2.0's AES-256 mandate. Verify via Intune BitLocker policy / configuration baselines; note that changing the method only affects newly encrypted volumes, so existing devices migrate at re-encryption or reimage.
 
 ## Scope boundaries to name in the report
 
@@ -996,19 +996,19 @@ DeviceFileEvents
 - **Assessment → watchlist reconciliation, quarterly:** each assessment refresh regenerates the watchlists and R7's inline list. Remediated items are *removed*, never left as tombstones — an entry that stays after remediation silently suppresses regression alerts, which defeats the entire design.
 - **Thresholds frozen between reviews:** severity thresholds and the maturity-score cut-offs change only at the quarterly review, so trend lines stay honest.
 - **Rule health:** monitor `SentinelHealth` for scheduled-rule failures (a silently failing R1 is indistinguishable from a clean environment) and the custom detection run status in the Defender portal for R6/R7.
-- **Deployment as code:** Sentinel repositories for R1–R5 (rules + summary rule), custom detection API for R6–R7; watchlist content and the R7 path list are the only per-customer parameters. The engagement sequence this enforces: assessment produces the baseline → remediation shrinks the watchlists → rules guard the new floor → the quarterly workbook shows the trend.
+- **Deployment as code:** Sentinel repositories for R1–R5 (rules + summary rule), custom detection API for R6–R7; watchlist content and the R7 path list are the only per-environment parameters. The engagement sequence this enforces: assessment produces the baseline → remediation shrinks the watchlists → rules guard the new floor → the quarterly workbook shows the trend.
 
 ---
 
 ## External dependencies — who actually controls the migration
 
-The largest PQC migration blocker is not customer readiness; it is **vendor readiness**. The customer controls the inventory, the classical cleanup, and the pressure applied to vendors — the migration itself is queued behind third parties. Stating this explicitly prevents the report reading as a list of customer failures:
+The largest PQC migration blocker is not enterprise readiness; it is **vendor readiness**. The corporation controls the inventory, the classical cleanup, and the pressure applied to vendors — the migration itself is queued behind third parties. Stating this explicitly prevents the report reading as a list of corporation failures:
 
-| Dependency | What's blocked on them | Customer action |
+| Dependency | What's blocked on them |  action |
 |---|---|---|
 | Microsoft platform | PQC key types in Key Vault/Managed HSM, ML-DSA in AD CS/Windows PKI, Schannel hybrid TLS, Cloud PKI | Track roadmap; design so adoption is a config change |
 | OS / runtime vendors (.NET, Java, OpenSSL distros) | PQC in runtime crypto stacks; apps inherit when they rebuild | Keep runtimes current; require rebuild cadence from app vendors |
-| Application vendors (collaboration, CAD/engineering, print management, LOB tooling — fill from the Layer 3 attribution output) | Bundled crypto libraries — customer cannot patch these directly | Update cadence + crypto-agility clauses in contracts (CRA-aligned) |
+| Application vendors (collaboration, CAD/engineering, print management, LOB tooling — fill from the Layer 3 attribution output) | Bundled crypto libraries —  cannot patch these directly | Update cadence + crypto-agility clauses in contracts (CRA-aligned) |
 | Network/security appliance vendors (firewalls, VPN, load balancers) | PQC IKE/TLS on long-lifecycle hardware — historically the last movers | PQC roadmap statement as procurement requirement; plan refresh cycles against 2030 |
 | HSM & PKI vendors | FIPS-validated PQC key storage, CA software support | Include in root-ceremony planning; validated modules lag standards by years |
 | Public CAs / CA-Browser Forum | No public PQC certificates issuable yet | None — monitor; agility (short-lived certs, ACME) is the preparation |
@@ -1037,7 +1037,7 @@ Four domains, scored 1–5. Two are computable from telemetry; two are assessed 
 
 **Coverage capping rule:** no telemetry-derived domain may score more than **Inventory completeness + 2**. A "clean" legacy-crypto result measured against 40% of the estate is not a 5 — this rule makes incomplete coverage mathematically unable to produce a green dashboard, which is the false-confidence failure mode of every heuristic scoring model.
 
-Composite query for the two telemetry-scoreable domains — run in the **unified Defender portal** (Advanced Hunting with the Sentinel workspace onboarded, so `SigninLogs`, `SecurityEvent`, and `DeviceTvm*` share one query surface). Thresholds are heuristics; calibrate per customer and keep them stable across quarters so the trend is honest:
+Composite query for the two telemetry-scoreable domains — run in the **unified Defender portal** (Advanced Hunting with the Sentinel workspace onboarded, so `SigninLogs`, `SecurityEvent`, and `DeviceTvm*` share one query surface). Thresholds are heuristics; calibrate per environment and keep them stable across quarters so the trend is honest:
 
 ```kql
 let WeakKerb = toscalar(
@@ -1091,7 +1091,7 @@ Extend the signal set as coverage grows (OpenSSH version share, SHA-1 cert count
 
 ## Migration roadmap
 
-| Phase | Window | Customer actions | Vendor-dependent | EU roadmap alignment |
+| Phase | Window | Actions | Vendor-dependent | EU roadmap alignment |
 |---|---|---|---|---|
 | Inventory & cleanup | Now – end 2026 | Complete inventory + coverage table; remove SHA-1/TLS 1.0-1.1/EOL libraries/legacy auth; BitLocker AES-256; vendor roadmap requests | — | Inventory & national planning milestone (end 2026) |
 | Agility & PKI modernization | 2027 – 2028 | ACME/CLM rollout; v3/KSP templates; NDES→Cloud PKI decision; root ceremony planning; HNDL data classification; CRA-aligned contract clauses | Hybrid TLS reaching platforms; validated PQC HSMs emerging | CRA applicable (Dec 2027) |
@@ -1100,7 +1100,7 @@ Extend the signal set as coverage grows (OpenSSH version share, SHA-1 cert count
 
 ## Consolidated reporting view
 
-For the customer report, roll the layers into a single maturity table — **with an explicit coverage status per cell**, because a zero means nothing until it is labeled *verified clean* (telemetry present, finding absent), *not measured* (telemetry gap — itself a finding), or *not applicable* (resource absent):
+For the report, roll the layers into a single maturity table — **with an explicit coverage status per cell**, because a zero means nothing until it is labeled *verified clean* (telemetry present, finding absent), *not measured* (telemetry gap — itself a finding), or *not applicable* (resource absent):
 
 | Layer | Coverage status | Quantum-vulnerable footprint | Classical weaknesses found | Migration blockers | Data lifetime risk (HNDL) |
 |---|---|---|---|---|---|
@@ -1111,7 +1111,7 @@ For the customer report, roll the layers into a single maturity table — **with
 | Application/cloud | | Key Vault keys, TDE/CMK | Ingress TLS ≤ 1.1 traffic | App-embedded crypto | Backups, databases, archives |
 | SSH / VPN / email / backup | | Host keys, IKE, SMTP TLS | Legacy kex, old appliances | Appliance lifecycles | Recorded transit traffic, backup archives |
 
-Scoring per cell (coverage status, then red/amber/green on findings) gives the customer a repeatable quarterly maturity measurement — and gives the report a trend line rather than a one-off snapshot.
+Scoring per cell (coverage status, then red/amber/green on findings) gives the IT Department a repeatable quarterly maturity measurement — and gives the report a trend line rather than a one-off snapshot.
 
 ---
 
