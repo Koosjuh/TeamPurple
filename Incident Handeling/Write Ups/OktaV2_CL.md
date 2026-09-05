@@ -236,7 +236,7 @@ pushOnlyResponseType = OV_RESPONSE_APPROVE
 pushWithNumberChallengeResponseType = OV_WITH_CHALLENGE_RESPONSE_VALID
 ```
 
-`USER_VERIFYING_BIO_OR_PIN` means biometric/PIN verification occurred on the authenticator device. It does **not** by itself prove Windows Hello for Business.
+Per example in the SigninLogs within Azure AD / Entra ID we could be investigating a `WHFB` signin and we want to correlate that to our OKTA. Here we can find `USER_VERIFYING_BIO_OR_PIN` means biometric/PIN verification occurred on the authenticator device. It does **not** by itself prove Windows Hello for Business. However it is a strong indicator of a possible `Windows Hello for Business` sign in if the other details such as a time stamp and IP matches.
 
 ### Okta FastPass
 
@@ -270,9 +270,7 @@ This confirms FastPass exists in the authentication/session context, but an old 
 
 ### WebAuthn / FIDO
 
-`fido_webauthn` can represent FIDO2/WebAuthn including Windows Hello, but it can also be another passkey/security-key/platform authenticator.
-
-Do not label all `fido_webauthn` events as Windows Hello without supporting evidence.
+`fido_webauthn` can represent FIDO2/WebAuthn including `Windows Hello for business`, but it can also be another passkey/security-key/platform authenticator.
 
 ---
 
@@ -863,56 +861,7 @@ SigninLogs
 
 ---
 
-## 8.2 Successful Windows Hello for Business sign-ins
-
-```kusto
-SigninLogs
-| where TimeGenerated > ago(30d)
-| where AppDisplayName =~ "Windows Sign In"
-| where tostring(AuthenticationDetails) has "Windows Hello for Business"
-| extend
-    Auth = parse_json(tostring(AuthenticationDetails)),
-    Device = parse_json(tostring(DeviceDetail)),
-    SignInStatus = parse_json(tostring(Status))
-| extend
-    AuthenticationMethod = coalesce(
-        tostring(Auth.authenticationMethod),
-        tostring(Auth[0].authenticationMethod)
-    ),
-    AuthenticationSucceeded = coalesce(
-        tostring(Auth.succeeded),
-        tostring(Auth[0].succeeded)
-    ),
-    DeviceId = tostring(Device.deviceId),
-    DeviceName = tostring(Device.displayName),
-    DeviceOS = tostring(Device.operatingSystem),
-    TrustType = tostring(Device.trustType),
-    IsManaged = tostring(Device.isManaged),
-    ErrorCode = toint(SignInStatus.errorCode)
-| where ErrorCode == 0
-| project
-    TimeGenerated,
-    UserPrincipalName,
-    IPAddress,
-    AuthenticationMethod,
-    AuthenticationSucceeded,
-    DeviceName,
-    DeviceId,
-    DeviceOS,
-    TrustType,
-    IsManaged,
-    IncomingTokenType,
-    RiskLevelDuringSignIn,
-    ConditionalAccessStatus,
-    TokenProtectionStatusDetails
-| order by TimeGenerated desc
-```
-
-If `AuthenticationDetails` explicitly records `Windows Hello for Business` with `succeeded=true`, that is direct Entra evidence.
-
----
-
-## 8.3 Correlate Okta and Entra by user + IP + time
+## 8.2 Correlate Okta and Entra by user + IP + time
 
 ```kusto
 let User = "USER_ENTITY";
@@ -1026,128 +975,6 @@ Okta
     EntraErrorCode
 | order by OktaTime asc
 ```
-
----
-
-## 8.4 Correlate Okta FastPass context with Entra Windows Hello
-
-```kusto
-let User = "USER_ENTITY";
-let Lookback = 30d;
-let CorrelationWindowSeconds = 300;
-
-let OktaFastPass =
-    OktaV2_CL
-    | where TimeGenerated > ago(Lookback)
-    | where ActorUsername =~ User
-        or OriginalActorAlternateId =~ User
-        or tostring(OriginalTarget) has User
-    | extend
-        FirstMethod = tostring(DebugData.authMethodFirstType),
-        FirstVerificationTime = todatetime(DebugData.authMethodFirstVerificationTime),
-        SecondMethod = tostring(DebugData.authMethodSecondType),
-        SecondVerificationTime = todatetime(DebugData.authMethodSecondVerificationTime),
-        Factor = tostring(DebugData.factor),
-        TargetText = tostring(OriginalTarget),
-        DeviceFingerprint = tostring(DebugData.deviceFingerprint),
-        CorrUser = tolower(coalesce(ActorUsername, OriginalActorAlternateId)),
-        CorrIP = SrcIpAddr
-    | where Factor =~ "SIGNED_NONCE"
-        or FirstMethod has "signed_nonce"
-        or SecondMethod has "signed_nonce"
-        or TargetText has "SIGNED_NONCE"
-        or TargetText has "FastPass"
-    | extend FastPassFreshness = case(
-        Factor =~ "SIGNED_NONCE",
-            "Current event",
-        isnotnull(FirstVerificationTime)
-            and abs(datetime_diff("minute", TimeGenerated, FirstVerificationTime)) <= 5,
-            "Fresh auth context",
-        isnotnull(SecondVerificationTime)
-            and abs(datetime_diff("minute", TimeGenerated, SecondVerificationTime)) <= 5,
-            "Fresh auth context",
-        "Historical/session context"
-    )
-    | project
-        CorrUser,
-        CorrIP,
-        OktaTime = TimeGenerated,
-        EventOriginalType,
-        EventResult,
-        Factor,
-        FirstMethod,
-        FirstVerificationTime,
-        SecondMethod,
-        SecondVerificationTime,
-        FastPassFreshness,
-        DeviceFingerprint,
-        OktaOS = SrcDvcOs,
-        ActorSessionId;
-
-let EntraHello =
-    SigninLogs
-    | where TimeGenerated > ago(Lookback)
-    | where UserPrincipalName =~ User
-    | where AppDisplayName =~ "Windows Sign In"
-    | where tostring(AuthenticationDetails) has "Windows Hello for Business"
-    | extend
-        CorrUser = tolower(UserPrincipalName),
-        CorrIP = IPAddress,
-        Device = parse_json(tostring(DeviceDetail)),
-        SignInStatus = parse_json(tostring(Status))
-    | extend
-        DeviceId = tostring(Device.deviceId),
-        DeviceName = tostring(Device.displayName),
-        DeviceOS = tostring(Device.operatingSystem),
-        TrustType = tostring(Device.trustType),
-        ErrorCode = toint(SignInStatus.errorCode)
-    | where ErrorCode == 0
-    | project
-        CorrUser,
-        CorrIP,
-        EntraTime = TimeGenerated,
-        DeviceId,
-        DeviceName,
-        DeviceOS,
-        TrustType,
-        IncomingTokenType,
-        RiskLevelDuringSignIn;
-
-OktaFastPass
-| join kind=inner EntraHello on CorrUser, CorrIP
-| extend DeltaSeconds = abs(datetime_diff("second", OktaTime, EntraTime))
-| where DeltaSeconds <= CorrelationWindowSeconds
-| project
-    CorrUser,
-    CorrIP,
-    EntraTime,
-    OktaTime,
-    DeltaSeconds,
-    DeviceName,
-    DeviceId,
-    DeviceOS,
-    TrustType,
-    IncomingTokenType,
-    RiskLevelDuringSignIn,
-    OktaOS,
-    DeviceFingerprint,
-    Factor,
-    FirstMethod,
-    FirstVerificationTime,
-    SecondMethod,
-    SecondVerificationTime,
-    FastPassFreshness,
-    EventOriginalType,
-    EventResult,
-    ActorSessionId
-| order by EntraTime asc
-```
-
-### Interpretation
-
-- Entra `Windows Hello for Business` proves Windows Hello for Business for that Entra sign-in.
-- Okta `SIGNED_NONCE` proves FastPass evidence/context on the Okta side.
-- A close match does not mean Windows Hello directly authenticated the Okta event unless the Okta event itself supports that conclusion.
 
 ---
 
