@@ -32,7 +32,7 @@ The catalogue is Windows-focused because the current report logic uses Windows e
 
 This section identifies remote access, remote assistance, and RMM tooling that is configured, deployed, or integrated through Microsoft Intune. It covers native Intune capabilities such as Remote Help, TeamViewer integrations, and third-party remote access applications deployed through Intune. Microsoft Graph is needed for these Tenant settings.
 
-## Integrated Teamviewer
+### Integrated Teamviewer
 
 For Integrated Teamviewer settings please see: https://graph.microsoft.com/beta/deviceManagement/remoteAssistancePartners
 
