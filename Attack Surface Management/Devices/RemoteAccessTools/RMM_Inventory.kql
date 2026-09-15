@@ -1,249 +1,317 @@
 // Remote Access / RMM inventory and activity report
 // Run in Microsoft Defender XDR Advanced Hunting.
-let Lookback = 2d;
+//
+// InstalledDevices:
+//   Devices where matching software is currently present in DeviceTvmSoftwareInventory.
+//
+// DevicesWithObservedActivity:
+//   Devices where a matching process was observed during the configured Lookback.
+//
+// DevicesWithInteractiveOrSessionActivity:
+//   Devices where a process classified as Interactive, Viewer,
+//   TechnicianConsole, or SessionComponent was observed.
+//
+// DetectedSoftwareNames:
+//   Actual DeviceTvmSoftwareInventory software names that matched.
+//
+// ObservedProcesses:
+//   Actual process filenames observed by Defender.
+//
+// MatchedSoftwareIndicators / MatchedProcessIndicators:
+//   Catalogue values responsible for the match.
+//
+// Persistent Agent/Service activity does not necessarily indicate
+// that an interactive remote-control session occurred.
+let Lookback = 30d;
 let IncludeSupplementalIndicators = false; // Set to true to also include disabled supplemental indicators that are not yet sufficiently vendor-verified.
-let RemoteAccessProducts = externaldata(
-    ProductId:string,
-    Vendor:string,
-    Product:string,
-    Type:string,
-    OfficialURL:string,
-    LastVerified:string,
-    Notes:string
-)
-[
-    @"https://raw.githubusercontent.com/Koosjuh/TeamPurple/main/Attack%20Surface%20Management/Devices/RemoteAccessTools/Catalogue/RemoteAccessProducts.csv"
-]
-with (
-    format="csv",
-    ignoreFirstRecord=true
-);
-let RemoteAccessIndicators = externaldata(
-    ProductId:string,
-    Platform:string,
-    IndicatorType:string,
-    IndicatorValue:string,
-    MatchType:string,
-    ActivityRole:string,
-    PathPattern:string,
-    CompanyPattern:string,
-    Enabled:bool,
-    Confidence:string,
-    SourceURL:string,
-    LastVerified:string,
-    Notes:string
-)
-[
-    @"https://raw.githubusercontent.com/Koosjuh/TeamPurple/main/Attack%20Surface%20Management/Devices/RemoteAccessTools/Catalogue/RemoteAccessIndicators.csv"
-]
-with (
-    format="csv",
-    ignoreFirstRecord=true
-)
-| where Enabled == true or IncludeSupplementalIndicators
-| where Platform in~ ("Windows", "All");
-// -----------------------------------------------------------------------------
-// Installed software
-// -----------------------------------------------------------------------------
-let SoftwareIndicatorsExact =
-    RemoteAccessIndicators
-    | where IndicatorType =~ "SoftwareName"
-    | where MatchType =~ "equals"
-    | extend SoftwareNameLower = tolower(IndicatorValue)
+let RemoteAccessProducts =
+    externaldata(
+        ProductId:string,
+        Vendor:string,
+        Product:string,
+        Type:string,
+        OfficialURL:string,
+        LastVerified:string,
+        Notes:string
+    )
+    [
+        @"https://raw.githubusercontent.com/Koosjuh/TeamPurple/main/Attack%20Surface%20Management/Devices/RemoteAccessTools/Catalogue/RemoteAccessProducts.csv"
+    ]
+    with (
+        format="csv",
+        ignoreFirstRecord=true
+    );
+let RemoteAccessIndicatorsRaw =
+    externaldata(
+        ProductId:string,
+        Platform:string,
+        IndicatorType:string,
+        IndicatorValue:string,
+        MatchType:string,
+        ActivityRole:string,
+        PathPattern:string,
+        CompanyPattern:string,
+        Enabled:bool,
+        Confidence:string,
+        SourceURL:string,
+        LastVerified:string,
+        Notes:string
+    )
+    [
+        @"https://raw.githubusercontent.com/Koosjuh/TeamPurple/main/Attack%20Surface%20Management/Devices/RemoteAccessTools/Catalogue/RemoteAccessIndicators.csv"
+    ]
+    with (
+        format="csv",
+        ignoreFirstRecord=true
+    );
+let ActiveIndicators =
+    RemoteAccessIndicatorsRaw
+    | where Enabled == true
+        or (IncludeSupplementalIndicators and Confidence == "Supplemental")
+    | where Platform in ("Windows", "All")
     | project
         ProductId,
-        SoftwareNameLower,
-        Confidence;
-let SoftwareIndicatorsPattern =
-    RemoteAccessIndicators
-    | where IndicatorType =~ "SoftwareName"
-    | where MatchType !~ "equals"
-    | extend
-        IndicatorLower = tolower(IndicatorValue),
-        JoinKey = 1
-    | project
-        ProductId,
-        IndicatorLower,
+        IndicatorType,
+        IndicatorValue,
         MatchType,
-        Confidence,
-        JoinKey;
+        ActivityRole,
+        PathPattern,
+        CompanyPattern;
+// -----------------------------------------------------------------------------
+// SOFTWARE INVENTORY
+// -----------------------------------------------------------------------------
+let WindowsSoftwareInventory =
+    materialize(
+        DeviceTvmSoftwareInventory
+        | where OSPlatform startswith_cs "Windows"
+        | project
+            DeviceId,
+            SoftwareName
+    );
+let SoftwareIndicatorsExact =
+    ActiveIndicators
+    | where IndicatorType == "SoftwareName"
+    | where MatchType == "equals"
+    | project
+        ProductId,
+        IndicatorValue;
+let SoftwareIndicatorsPattern =
+    ActiveIndicators
+    | where IndicatorType == "SoftwareName"
+    | where MatchType in ("contains", "startswith")
+    | project
+        ProductId,
+        IndicatorValue,
+        MatchType;
+let SoftwareExactNames =
+    SoftwareIndicatorsExact
+    | distinct IndicatorValue;
 let InstalledExact =
-    DeviceTvmSoftwareInventory
-    | where OSPlatform startswith "Windows"
-    | extend SoftwareNameLower = tolower(SoftwareName)
-    | join kind=inner SoftwareIndicatorsExact on SoftwareNameLower
+    SoftwareIndicatorsExact
+    | extend SoftwareNameKey = tolower(IndicatorValue)
+    | join kind=inner (
+        WindowsSoftwareInventory
+        | where SoftwareName in~ (SoftwareExactNames)
+        | extend SoftwareNameKey = tolower(SoftwareName)
+    ) on SoftwareNameKey
     | project
         ProductId,
         DeviceId,
-        DeviceName,
-        SoftwareVendor,
         SoftwareName,
-        SoftwareVersion,
-        Confidence;
+        MatchedIndicator = IndicatorValue;
 let InstalledPattern =
-    DeviceTvmSoftwareInventory
-    | where OSPlatform startswith "Windows"
-    | extend
-        SoftwareNameLower = tolower(SoftwareName),
-        JoinKey = 1
-    | join kind=inner SoftwareIndicatorsPattern on JoinKey
+    SoftwareIndicatorsPattern
+    | extend JoinKey = 1
+    | join kind=inner (
+        WindowsSoftwareInventory
+        | extend JoinKey = 1
+    ) on JoinKey
     | where
-        (MatchType =~ "contains" and SoftwareNameLower contains IndicatorLower)
+        (MatchType == "contains" and SoftwareName contains IndicatorValue)
         or
-        (MatchType =~ "startswith" and SoftwareNameLower startswith IndicatorLower)
+        (MatchType == "startswith" and SoftwareName startswith IndicatorValue)
     | project
         ProductId,
         DeviceId,
-        DeviceName,
-        SoftwareVendor,
         SoftwareName,
-        SoftwareVersion,
-        Confidence;
+        MatchedIndicator = IndicatorValue;
 let InstalledMatches =
     union InstalledExact, InstalledPattern;
 let Installed =
     InstalledMatches
     | summarize
         InstalledDevices = dcount(DeviceId),
-        DetectedSoftwareNames = make_set(SoftwareName, 25),
-        DetectedSoftwareVersions = make_set(SoftwareVersion, 25)
+        DetectedSoftwareNames = make_set(SoftwareName, 50),
+        MatchedSoftwareIndicators = make_set(MatchedIndicator, 50)
       by ProductId;
-// -----------------------------------------------------------------------------
-// Process activity
-// -----------------------------------------------------------------------------
 let ProcessIndicatorsExact =
-    RemoteAccessIndicators
-    | where IndicatorType =~ "ProcessName"
-    | where MatchType =~ "equals"
-    | extend
-        FileNameLower = tolower(IndicatorValue),
-        PathLower = tolower(PathPattern),
-        CompanyLower = tolower(CompanyPattern)
+    ActiveIndicators
+    | where IndicatorType == "ProcessName"
+    | where MatchType == "equals"
     | project
         ProductId,
-        FileNameLower,
+        IndicatorValue,
         ActivityRole,
-        PathLower,
-        CompanyLower,
-        Confidence;
+        PathPattern,
+        CompanyPattern;
+let ExactProcessNames =
+    ProcessIndicatorsExact
+    | distinct IndicatorValue;
+let CandidateExactProcessEvents =
+    materialize(
+        DeviceProcessEvents
+        | where Timestamp >= ago(Lookback)
+        | where FileName in~ (ExactProcessNames)
+        | project
+            Timestamp,
+            DeviceId,
+            FileName,
+            FolderPath,
+            ProcessVersionInfoCompanyName
+    );
+let ActivityExact =
+    ProcessIndicatorsExact
+    | extend FileNameKey = tolower(IndicatorValue)
+    | join kind=inner (
+        CandidateExactProcessEvents
+        | extend FileNameKey = tolower(FileName)
+    ) on FileNameKey
+    | where
+        isempty(PathPattern)
+        or FolderPath contains PathPattern
+    | where
+        isempty(CompanyPattern)
+        or ProcessVersionInfoCompanyName contains CompanyPattern
+    | project
+        Timestamp,
+        ProductId,
+        DeviceId,
+        FileName,
+        ActivityRole,
+        MatchedIndicator = IndicatorValue;
+// -----------------------------------------------------------------------------
+// PROCESS INDICATORS - STARTSWITH / CONTAINS
+// -----------------------------------------------------------------------------
+//
+// Pattern matching is handled generically for every product.
+//
+// A search token is derived from IndicatorValue and used to reduce the
+// DeviceProcessEvents dataset before applying startswith/contains.
 let ProcessIndicatorsPattern =
-    RemoteAccessIndicators
-    | where IndicatorType =~ "ProcessName"
-    | where MatchType !~ "equals"
-    | extend
-        IndicatorLower = tolower(IndicatorValue),
-        PathLower = tolower(PathPattern),
-        CompanyLower = tolower(CompanyPattern),
-        JoinKey = 1
+    ActiveIndicators
+    | where IndicatorType == "ProcessName"
+    | where MatchType in ("startswith", "contains")
+    | extend PrefilterToken = extract(@"[A-Za-z0-9]{3,}", 0, IndicatorValue)
+    | where isnotempty(PrefilterToken)
     | project
         ProductId,
-        IndicatorLower,
+        IndicatorValue,
         MatchType,
         ActivityRole,
-        PathLower,
-        CompanyLower,
-        Confidence,
-        JoinKey;
-let ActivityExact =
-    DeviceProcessEvents
-    | where Timestamp >= ago(Lookback)
-    | extend
-        FileNameLower = tolower(FileName),
-        FolderPathLower = tolower(FolderPath),
-        CompanyNameLower = tolower(ProcessVersionInfoCompanyName)
-    | join kind=inner ProcessIndicatorsExact on FileNameLower
-    | where isempty(PathLower) or FolderPathLower contains PathLower
-    | where isempty(CompanyLower) or CompanyNameLower contains CompanyLower
-    | project
-        Timestamp,
-        ProductId,
-        DeviceId,
-        DeviceName,
-        FileName,
-        FolderPath,
-        ProcessVersionInfoCompanyName,
-        ProcessVersionInfoProductName,
-        AccountUpn,
-        ActivityRole,
-        Confidence;
+        PathPattern,
+        CompanyPattern,
+        PrefilterToken;
+let ProcessPatternTerms =
+    ProcessIndicatorsPattern
+    | distinct PrefilterToken;
+let CandidatePatternProcessEvents =
+    materialize(
+        DeviceProcessEvents
+        | where Timestamp >= ago(Lookback)
+        | where FileName has_any (ProcessPatternTerms)
+        | project
+            Timestamp,
+            DeviceId,
+            FileName,
+            FolderPath,
+            ProcessVersionInfoCompanyName
+    );
 let ActivityPattern =
-    DeviceProcessEvents
-    | where Timestamp >= ago(Lookback)
-    | extend
-        FileNameLower = tolower(FileName),
-        FolderPathLower = tolower(FolderPath),
-        CompanyNameLower = tolower(ProcessVersionInfoCompanyName),
-        JoinKey = 1
-    | join kind=inner ProcessIndicatorsPattern on JoinKey
+    ProcessIndicatorsPattern
+    | extend JoinKey = 1
+    | join kind=inner (
+        CandidatePatternProcessEvents
+        | extend JoinKey = 1
+    ) on JoinKey
     | where
-        (MatchType =~ "contains" and FileNameLower contains IndicatorLower)
+        (MatchType == "startswith" and FileName startswith IndicatorValue)
         or
-        (MatchType =~ "startswith" and FileNameLower startswith IndicatorLower)
-    | where isempty(PathLower) or FolderPathLower contains PathLower
-    | where isempty(CompanyLower) or CompanyNameLower contains CompanyLower
+        (MatchType == "contains" and FileName contains IndicatorValue)
+    | where
+        isempty(PathPattern)
+        or FolderPath contains PathPattern
+    | where
+        isempty(CompanyPattern)
+        or ProcessVersionInfoCompanyName contains CompanyPattern
     | project
         Timestamp,
         ProductId,
         DeviceId,
-        DeviceName,
         FileName,
-        FolderPath,
-        ProcessVersionInfoCompanyName,
-        ProcessVersionInfoProductName,
-        AccountUpn,
         ActivityRole,
-        Confidence;
+        MatchedIndicator = IndicatorValue;
 let ActivityMatches =
-    union ActivityExact, ActivityPattern;
-// Any matching process means a product component executed.
-// Persistent services/agents do not necessarily indicate an interactive session.
+    materialize(
+        union ActivityExact, ActivityPattern
+    );
 let Activity =
     ActivityMatches
     | summarize
-        ActiveDevices30d = dcount(DeviceId),
+        DevicesWithObservedActivity = dcount(DeviceId),
         LastObserved = max(Timestamp),
-        ObservedProcesses = make_set(FileName, 50),
+        ObservedProcesses = make_set(FileName, 100),
+        MatchedProcessIndicators = make_set(MatchedIndicator, 100),
         ObservedRoles = make_set(ActivityRole, 20)
       by ProductId;
-// Stronger evidence of actual interactive/session activity.
 let InteractiveActivity =
     ActivityMatches
-    | where ActivityRole in~ (
+    | where ActivityRole in (
         "Interactive",
         "Viewer",
         "TechnicianConsole",
         "SessionComponent"
     )
     | summarize
-        InteractiveOrSessionDevices30d = dcount(DeviceId),
-        LastInteractiveOrSessionObserved = max(Timestamp)
+        DevicesWithInteractiveOrSessionActivity = dcount(DeviceId),
+        LastInteractiveOrSessionObserved = max(Timestamp),
+        InteractiveOrSessionProcesses = make_set(FileName, 100)
       by ProductId;
-// Include products that are installed OR observed executing.
-// This also catches portable tools that are absent from installed-software inventory.
-let DetectedProductIds =
-    union
-        (Installed | project ProductId),
-        (Activity | project ProductId)
-    | distinct ProductId;
-DetectedProductIds
-| join kind=leftouter RemoteAccessProducts on ProductId
+// -----------------------------------------------------------------------------
+// FINAL REPORT
+// -----------------------------------------------------------------------------
+RemoteAccessProducts
+| project
+    ProductId,
+    Vendor,
+    Product,
+    Type
 | join kind=leftouter Installed on ProductId
 | join kind=leftouter Activity on ProductId
 | join kind=leftouter InteractiveActivity on ProductId
 | extend
     InstalledDevices = coalesce(InstalledDevices, 0),
-    ActiveDevices30d = coalesce(ActiveDevices30d, 0),
-    InteractiveOrSessionDevices30d = coalesce(InteractiveOrSessionDevices30d, 0)
+    DevicesWithObservedActivity = coalesce(DevicesWithObservedActivity, 0),
+    DevicesWithInteractiveOrSessionActivity = coalesce(DevicesWithInteractiveOrSessionActivity, 0),
+    ActivityLookback = tostring(Lookback)
+| where
+    InstalledDevices > 0
+    or DevicesWithObservedActivity > 0
 | project
     Vendor,
     Product,
     Type,
     InstalledDevices,
-    ActiveDevices30d,
-    InteractiveOrSessionDevices30d,
-    LastObserved,
-    LastInteractiveOrSessionObserved,
     DetectedSoftwareNames,
+    MatchedSoftwareIndicators,
+    DevicesWithObservedActivity,
     ObservedProcesses,
-    ObservedRoles
-| order by InstalledDevices desc, ActiveDevices30d desc, Product asc
+    MatchedProcessIndicators,
+    ObservedRoles,
+    LastObserved,
+    DevicesWithInteractiveOrSessionActivity,
+    InteractiveOrSessionProcesses,
+    LastInteractiveOrSessionObserved
+| order by
+    InstalledDevices desc,
+    DevicesWithObservedActivity desc,
+    Product asc
