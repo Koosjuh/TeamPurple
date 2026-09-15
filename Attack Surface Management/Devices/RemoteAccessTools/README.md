@@ -291,3 +291,13 @@ Content-Length: 123
   "value": "Z2V0UmVtb3RlQXNzaXN0YW5jZU1vbml0b3JBdmdTZXNzaW9uVGltZVJlcG9ydCBJbnR1bmUgRG9jIFNhbXBsZSAtMTUzNDAwMDU5OQ=="
 }
 ```
+
+## Thank you
+
+Special thanks to the following projects and contributors whose research and public resources helped improve this catalogue:
+
+brokensound77
+https://gist.github.com/brokensound77/6d8a1e480e65ff20e151099c98267b14
+
+Action1Corp
+https://github.com/Action1Corp
