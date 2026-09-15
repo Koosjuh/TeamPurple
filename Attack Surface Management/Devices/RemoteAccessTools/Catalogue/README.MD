@@ -96,3 +96,18 @@ Add new products to RemoteAccessProducts.csv first, then add one or more corresp
 Prefer vendor documentation when adding or changing indicators. Set Enabled=false for indicators that are useful for hunting but have not been sufficiently verified.
 
 Do not create duplicate ProductId values for the same product.
+
+## Intune Deployed RMM Tooling
+
+Please use the https://graph.microsoft.com/beta/deviceManagement/remoteAssistancePartners graph end point to see what is deployed. 
+
+```json
+{
+  "@odata.type": "#microsoft.graph.remoteAssistancePartner",
+  "id": "",
+  "displayName": "Display Name",
+  "onboardingUrl": "https://example.com/onboardingUrl/",
+  "onboardingStatus": "onboarding",
+  "lastConnectionDateTime": "YYYY-MM-DDThh:mm"
+}
+```
