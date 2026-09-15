@@ -1,0 +1,56 @@
+ProductId,Vendor,Product,Type,OfficialURL,LastVerified,Notes
+microsoft-remote-help,Microsoft,Microsoft Remote Help,Managed Remote Assistance,https://learn.microsoft.com/en-us/intune/remote-help/,2026-09-15,Enterprise Intune remote assistance.
+microsoft-quick-assist,Microsoft,Microsoft Quick Assist,Built-in Remote Assistance,https://learn.microsoft.com/en-us/windows/client-management/client-tools/quick-assist,2026-09-15,Windows Quick Assist application.
+anydesk,AnyDesk Software GmbH,AnyDesk,Remote Access,https://support.anydesk.com/,2026-09-15,Remote desktop and unattended access.
+teamviewer-remote,TeamViewer,TeamViewer Remote,Remote Access,https://www.teamviewer.com/en/products/remote/,2026-09-15,Full client / Host family.
+teamviewer-quicksupport,TeamViewer,TeamViewer QuickSupport,Managed Remote Assistance,https://www.teamviewer.com/en/global/support/knowledge-base/teamviewer-classic/modules/quicksupport/,2026-09-15,Portable attended-support module.
+connectwise-screenconnect,ConnectWise,ConnectWise ScreenConnect,RMM,https://docs.connectwise.com/ConnectWise_ScreenConnect_Documentation,2026-09-15,Remote support / unattended access.
+connectwise-automate,ConnectWise,ConnectWise Automate,RMM,https://docs.connectwise.com/ConnectWise_Automate_Documentation,2026-09-15,RMM agent platform; legacy LabTech naming retained as alias.
+beyondtrust-remote-support,BeyondTrust,BeyondTrust Remote Support,Managed Remote Assistance,https://www.beyondtrust.com/docs/remote-support/,2026-09-15,Formerly Bomgar Remote Support.
+splashtop-sos,Splashtop,Splashtop SOS,Managed Remote Assistance,https://support-splashtopbusiness.splashtop.com/,2026-09-15,Attended / on-demand support.
+splashtop-streamer,Splashtop,Splashtop Streamer,Remote Access,https://support-splashtopbusiness.splashtop.com/,2026-09-15,Unattended endpoint component.
+rustdesk,RustDesk,RustDesk,Remote Access,https://rustdesk.com/docs/en/client/,2026-09-15,Open-source remote desktop client.
+realvnc-connect,RealVNC,RealVNC Connect,Remote Access,https://help.realvnc.com/,2026-09-15,VNC Server / Viewer family; current and legacy server executable names included.
+tightvnc,GlavSoft,TightVNC,Remote Access,https://www.tightvnc.com/,2026-09-15,VNC server and viewer.
+ultravnc,UltraVNC,UltraVNC,Remote Access,https://uvnc.com/,2026-09-15,VNC server/viewer; vendor forum is primary executable evidence source.
+remote-utilities,Remote Utilities,Remote Utilities,Remote Access,https://www.remoteutilities.com/support/docs/,2026-09-15,Host / Viewer remote administration.
+radmin,Famatech,Radmin,Remote Access,https://www.radmin.com/,2026-09-15,Remote administration server/viewer.
+supremo,Nanosystems,Supremo,Remote Access,https://www.supremocontrol.com/,2026-09-15,Portable remote desktop with unattended service.
+aeroadmin,AeroAdmin,AeroAdmin,Remote Access,https://www.aeroadmin.com/en/,2026-09-15,Portable remote desktop; executable can be custom-branded.
+anyviewer,AOMEI,AnyViewer,Remote Access,https://www.anyviewer.com/,2026-09-15,Remote desktop / unattended access.
+awesun,AweRay,AweSun Remote Desktop,Remote Access,https://www.awesun.com/,2026-09-15,Remote desktop product.
+dwservice,DWService,DWService / DWAgent,Remote Access,https://docs.dwservice.net/,2026-09-15,Remote access agent with customizable process/service naming.
+litemanager,LiteManagerTeam,LiteManager,Remote Access,https://www.litemanager.com/support/,2026-09-15,Server / Viewer remote administration.
+netsupport-manager,NetSupport,NetSupport Manager,Remote Access,https://www.netsupportmanager.com/,2026-09-15,Enterprise remote control platform.
+zoho-assist,Zoho,Zoho Assist,Managed Remote Assistance,https://www.zoho.com/assist/,2026-09-15,Attended and unattended remote support.
+isl-light,ISL Online,ISL Light / ISL Light Client,Managed Remote Assistance,https://www.islonline.com/,2026-09-15,On-demand remote support client/operator software.
+isl-alwayson,ISL Online,ISL AlwaysOn,Remote Access,https://www.islonline.com/,2026-09-15,Installed unattended-access agent.
+remotepc,IDrive,RemotePC,Remote Access,https://www.remotepc.com/,2026-09-15,Remote access host/viewer.
+jump-desktop-connect,Phase Five Systems,Jump Desktop Connect,Remote Access,https://support.jumpdesktop.com/,2026-09-15,Unattended remote-access host for Jump Desktop.
+nomachine,NoMachine,NoMachine,Remote Access,https://www.nomachine.com/,2026-09-15,NX remote desktop server/client.
+dameware-mrc,SolarWinds,Dameware Mini Remote Control,Managed Remote Assistance,https://documentation.solarwinds.com/en/success_center/dameware/,2026-09-15,Remote control agent/service.
+simplehelp,SimpleHelp,SimpleHelp,RMM,https://simple-help.com/,2026-09-15,Remote support and Remote Access Service; vendor docs do not publish stable endpoint EXE names.
+iperius-remote,Enter Srl,Iperius Remote,Remote Access,https://www.iperiusremote.com/,2026-09-15,Portable / service-based remote desktop.
+chrome-remote-desktop,Google,Chrome Remote Desktop,Remote Access,https://support.google.com/chrome/answer/1649523,2026-09-15,Browser-based remote access; product inventory matching is safer than relying on undocumented process names.
+logmein-pro,GoTo,LogMeIn Pro,Remote Access,https://support.logmeininc.com/pro,2026-09-15,Unattended remote access product.
+gotomypc,GoTo,GoToMyPC,Remote Access,https://support.goto.com/gotomypc,2026-09-15,Unattended remote access product.
+goto-resolve,GoTo,GoTo Resolve,RMM,https://support.goto.com/resolve,2026-09-15,IT support and RMM platform.
+rescue-by-goto,GoTo,Rescue by GoTo,Managed Remote Assistance,https://support.goto.com/rescue,2026-09-15,On-demand attended support.
+atera,Atera,Atera,RMM,https://support.atera.com/,2026-09-15,RMM agent with integrated remote-access packages.
+ninjaone,NinjaOne,NinjaOne,RMM,https://www.ninjaone.com/docs/,2026-09-15,RMM agent.
+datto-rmm,Kaseya,Datto RMM,RMM,https://rmm.datto.com/help/,2026-09-15,RMM agent; legacy CentraStage/AEM naming retained.
+pulseway,Pulseway,Pulseway,RMM,https://intercom.help/pulseway/en/,2026-09-15,RMM agent.
+nable-take-control,N-able,N-able Take Control,Managed Remote Assistance,https://documentation.n-able.com/takecontrol/,2026-09-15,Remote support component used across N-able products.
+action1,Action1,Action1,RMM,https://www.action1.com/documentation/,2026-09-15,RMM / patch management agent with remote desktop.
+syncro,Syncro,Syncro,RMM,https://docs.syncromsp.com/,2026-09-15,RMM agent; some process evidence is from Syncro-operated community.
+superops,SuperOps,SuperOps,RMM,https://support.superops.com/,2026-09-15,RMM agent; Splashtop may be deployed as a remote-control component.
+level-io,Level,Level.io,RMM,https://docs.level.io/,2026-09-15,RMM agent.
+tactical-rmm,Amidaware / Tactical RMM,Tactical RMM,RMM,https://docs.tacticalrmm.com/,2026-09-15,Open-source RMM; commonly deploys MeshCentral agent for remote control.
+meshcentral,MeshCentral Project,MeshCentral,Remote Access,https://ylianst.github.io/MeshCentral/,2026-09-15,Open-source remote management / control agent.
+manageengine-endpoint-central,ManageEngine,ManageEngine Endpoint Central,RMM,https://www.manageengine.com/products/desktop-central/,2026-09-15,Unified endpoint management with remote control.
+manageengine-remote-access-plus,ManageEngine,ManageEngine Remote Access Plus,Managed Remote Assistance,https://www.manageengine.com/remote-desktop-management/,2026-09-15,Remote troubleshooting product using ManageEngine UEMS agent components.
+itarian-remote-control,ITarian,ITarian Remote Control,RMM,https://help.itarian.com/,2026-09-15,Remote control/RMM ecosystem; exact process indicators require product-version validation.
+domotz,Domotz,Domotz Collector,RMM,https://help.domotz.com/,2026-09-15,Network monitoring collector with secure remote access capabilities.
+xeox,XEOX,XEOX,RMM,https://xeox.com/,2026-09-15,RMM platform; process indicators retained as supplemental until vendor-doc confirmation.
+fleetdeck,FleetDeck,FleetDeck,Remote Access,https://fleetdeck.io/,2026-09-15,Remote desktop/RMM product; process indicators retained as supplemental until vendor-doc confirmation.
+impero-connect,Impero,Impero Connect,Remote Access,https://www.imperosoftware.com/impero-connect/,2026-09-15,Formerly Netop Remote Control.
