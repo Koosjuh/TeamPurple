@@ -1,11 +1,16 @@
 ## URL Triage
 
 ```text
-##### 
-- [DeviceNetworkEvents]
-- [UrlClickEvents]
-- [Virustotal]
-- [VM - SourceOS: <OS>]
+- [Host]
+  - [DeviceNetworkEvents]
+
+- [Email]
+  - [NetworkMessageID]
+  - [UrlClickEvents]
+
+-[URL]
+  - [Virustotal]
+  - [VM - SourceOS: <OS>]
 ```
 
 Check to see if a link was clicked from mail
