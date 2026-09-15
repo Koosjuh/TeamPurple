@@ -4,7 +4,7 @@ Files:
 
 - `RemoteAccessProducts.csv`: one canonical row per product.
 - `RemoteAccessIndicators.csv`: normalized software/process indicators with evidence, activity role and optional qualifiers.
-- `RemoteAccessTools.kql`: Defender XDR Advanced Hunting query that loads both CSV files through `externaldata()`.
+- `RMM_Inventory.kql`: Defender XDR Advanced Hunting query that loads both CSV files through `externaldata()`.
 
 ## Evidence policy
 
@@ -26,7 +26,7 @@ The catalogue is Windows-focused because the current report logic uses Windows e
 
 ## Query performance
 
-`RemoteAccessTools.kql` uses equality joins for exact process filenames. Only the small set of `contains`/`startswith` process indicators uses pattern matching. This avoids a Cartesian join between the full 30-day `DeviceProcessEvents` dataset and the complete indicator catalogue.
+`RMM_Inventory.kql` uses equality joins for exact process filenames. Only the small set of `contains`/`startswith` process indicators uses pattern matching. This avoids a Cartesian join between the full 30-day `DeviceProcessEvents` dataset and the complete indicator catalogue.
 
 ## Intune Deployed RMM Tooling
 
