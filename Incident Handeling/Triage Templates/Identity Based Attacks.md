@@ -2,6 +2,8 @@
 
 ### Entra ID
 ```text
+-[Action] 
+
 - [Initiator]
   - [AuditLogs] 
   - [InteractiveLogs]
