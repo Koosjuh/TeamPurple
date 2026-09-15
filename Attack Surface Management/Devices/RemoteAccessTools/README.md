@@ -1,7 +1,5 @@
 # Remote Access / RMM catalogue
 
-Research baseline: 2026-09-15
-
 Files:
 
 - `RemoteAccessProducts.csv`: one canonical row per product.
