@@ -2,7 +2,7 @@
 
 ### Entra ID
 ```text
--[Action] 
+- [Action] 
 
 - [Initiator]
   - [AuditLogs] 
