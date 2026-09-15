@@ -47,6 +47,7 @@ Permissions: DeviceManagementServiceConfig.Read.All, DeviceManagementServiceConf
   "onboardingStatus": "onboarding",
   "lastConnectionDateTime": "YYYY-MM-DDThh:mm"
 }
+```
 
 ### Remote Help Settings
 
@@ -65,7 +66,6 @@ Permissions: DeviceManagementServiceConfig.Read.All, DeviceManagementServiceConf
   }
 }
 ```
-
 
 ### Remote Help Session Report
 
