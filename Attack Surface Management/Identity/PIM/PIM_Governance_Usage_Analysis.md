@@ -58,7 +58,7 @@ The output is displayed as a pie chart.
 
 * Identify most commonly activated administrative roles.
 * Measure administrative activity concentration.
-* Detect unusually frequent role activations.
+* Detect unusually frequent role activation.
 * Support privileged access governance reviews.
 
 ## KQL 
@@ -99,7 +99,39 @@ AuditLogs
 )
 ```
 
-For only direct members aand standard roles
+Sometimes there are Groups that are eligible for GA. This query returns which groups PIM and from there you can research further to assigned roles.
+
+```kql
+let lookback = 30d;
+AuditLogs
+| where TimeGenerated >= ago(lookback)
+| where OperationName contains "PIM activation"
+| where OperationName contains "completed"
+| where Result =~ "success"
+| extend EventId = tostring(Id)
+| mv-expand Target = TargetResources
+| extend
+    TargetType = tostring(Target.type),
+    TargetName = tostring(Target.displayName)
+| where isnotempty(TargetName)
+| where TargetName !in~ ("Member", "Owner")
+| where TargetType in~ ("Role", "Group", "Other")
+// Prefer explicit groups and roles over targets classified as Other.
+| extend TargetPriority = case(
+    TargetType =~ "Group", 3,
+    TargetType =~ "Role", 2,
+    1
+)
+| summarize arg_max(TargetPriority, *) by EventId
+| summarize Activations = count()
+    by ActivatedRole = TargetName, TargetType
+| order by Activations desc
+| render piechart with (
+    title = "PIM role and group activations during the past 30 days"
+)
+```
+
+For only direct members and standard roles
 
 ```kql
 let lookback = 30d;
