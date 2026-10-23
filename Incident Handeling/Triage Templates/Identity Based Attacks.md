@@ -12,8 +12,8 @@
   - [Office Activity]
   - [AuthMethod]
     - [Valid MFA]
-      - [SessionId] 
-      - [IP] 
+      - [SessionId - SESSIONID] 
+      - [IP- IPADDRESS] 
       - [Method] 
 
 - [Target]
