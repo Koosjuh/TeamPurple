@@ -12,6 +12,9 @@
   - [Office Activity]
   - [AuthMethod]
     - [Valid MFA]
+      - [SessionId] 
+      - [IP] 
+      - [Method] 
 
 - [Target]
   - [AuditLogs] 
