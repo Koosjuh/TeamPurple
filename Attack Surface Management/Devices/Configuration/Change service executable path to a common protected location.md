@@ -20,25 +20,20 @@ DeviceTvmSecureConfigurationAssessment
 | join kind=inner (
     DeviceTvmSecureConfigurationAssessmentKB
     | where ConfigurationName =~ RecommendationName
-    | project ConfigurationId, ConfigurationName
-) on ConfigurationId
-| where IsApplicable == 1
-| where IsCompliant == 0
-| extend ContextJson = parse_json(Context)
-| extend
-    ServiceName = tostring(ContextJson[0]),
-    RawServicePath = tostring(ContextJson[1])
-| extend ServicePath = replace_string(RawServicePath, @"\""", @"""")
-| extend ServicePath = trim(@'"', ServicePath)
-| extend ServicePath = replace_regex(ServicePath, @"^\\\?\?\\", "")
-| extend ServicePath = replace_regex(ServicePath, @"^\\\\\?\\", "")
-| extend ExecutablePath = extract(@"([A-Za-z]:\\[^""]+?\.exe)", 1, ServicePath)
-| extend BaseFolder = extract(@"^([A-Za-z]:\\[^\\]+)", 1, ExecutablePath)
-| summarize arg_max(Timestamp, *) by DeviceId, ServiceName, ExecutablePath
-| project
-    DeviceName,
-    Recommendation = ConfigurationName,
-    ServiceName
+    | project ConfigurationId
+    ) on ConfigurationId
+| where IsApplicable == 1 and IsCompliant == 0
+| extend Ctx = todynamic(tostring(Context))
+| extend Entries = iff(gettype(Ctx[0]) == "array", Ctx, pack_array(Ctx))
+| mv-expand Entry = Entries
+| extend ServiceName = tostring(Entry[0]), RawPath = tostring(Entry[1])
+| extend CleanPath = replace_regex(replace_string(RawPath, '"', ''), @'^\\\?\?\\', '')
+| extend ExecutablePath = extract(@'(?i)([a-z]:\\.+?\.exe)', 1, CleanPath)
+| extend FolderPath = iff(isempty(ExecutablePath), CleanPath, extract(@'^(.*)\\[^\\]+$', 1, ExecutablePath))
+| summarize arg_max(Timestamp, *) by DeviceId, ServiceName
+| project Host = DeviceName, Service = ServiceName, FolderPath, ExecutablePath, LastAssessed = Timestamp
+| sort by Host asc, Service asc
+
 ```
 
 ```powershell
