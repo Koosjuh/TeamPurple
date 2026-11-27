@@ -52,3 +52,16 @@ EmailEvents
 | join kind=inner (UrlClickEvents) on NetworkMessageId
 | project Timestamp, RecipientEmailAddress, AccountUpn, Url, ActionType, IsClickedThrough, UrlChain, IPAddress
 ```
+
+URL CLickEvents from NetworkID
+
+```KQL
+let MessageIds = dynamic([
+    ""
+]);
+UrlClickEvents
+| where Timestamp > ago(30d)
+| where NetworkMessageId in (MessageIds)
+| project Timestamp, AccountUpn, Url, UrlChain, ActionType, IsClickedThrough, IPAddress, Workload, NetworkMessageId
+| sort by Timestamp desc
+```
